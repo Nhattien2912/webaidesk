@@ -1,0 +1,25 @@
+# Example Cloudflare Pages config for the `webaidesk` project.
+# IMPORTANT: once a wrangler.toml exists in the repo, Pages treats it as the source of truth for
+# bindings/vars of every deployment. Either keep configuring bindings in the dashboard (and do NOT
+# add wrangler.toml), or copy this file and fill in ALL real values before pushing.
+# Do not commit real secrets: set IP_HASH_SALT / TURNSTILE_SECRET_KEY with
+#   wrangler pages secret put IP_HASH_SALT --project-name <PROJECT>
+name = "webaidesk"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+# D1 is not created yet: delete this block until the database exists, or the deploy fails.
+[[d1_databases]]
+binding = "DB"
+database_name = "<D1_DATABASE_NAME>"
+database_id = "<D1_DATABASE_ID>"
+migrations_dir = "migrations"
+
+[vars]
+# Optional, comma-separated. Default is same-origin only.
+ALLOWED_ORIGINS = ""
+
+# Private release bucket (never public, no r2.dev). Served only through /api/download/*.
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "aidesk-releases"

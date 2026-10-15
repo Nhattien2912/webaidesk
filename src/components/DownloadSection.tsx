@@ -1,168 +1,178 @@
-import React, { useState } from 'react';
-import { 
-  Monitor, 
-  Download, 
-  AlertCircle, 
-  Sparkles, 
-  ShieldCheck, 
-  ArrowRight
-} from 'lucide-react';
+import React, { useState } from 'react'
+import { AlertTriangle, Check, Copy, Download, Loader2, Monitor } from 'lucide-react'
+import { SECTION_IDS } from '../config/navigation'
+import { formatBytes, type DownloadState } from '../lib/releaseManifest'
 
-interface DownloadSectionProps {
-  onOpenEarlyAccess: () => void;
+const REQUIREMENTS = ['Windows 10 hoặc 11, 64-bit', 'ChatGPT web cho GPT Manager', 'Codex hoặc Claude Code làm worker']
+
+function formatDate(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
 }
 
-export const DownloadSection: React.FC<DownloadSectionProps> = ({ onOpenEarlyAccess }) => {
-  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+const CopyButton: React.FC<{ value: string }> = ({ value }) => {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-xs font-medium text-muted hover:bg-white/5"
+      aria-label="Sao chép mã SHA-256"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+      <span aria-live="polite">{copied ? 'Đã chép' : 'Chép'}</span>
+    </button>
+  )
+}
 
-  const handleDownloadClick = () => {
-    setDownloadNotice(
-      'AI Desk hiện đang hoàn tất đợt kiểm thử Closed Beta nội bộ. Vui lòng để lại email bên dưới để nhận link tải bộ cài đặt .exe ngay khi đợt mở rộng bắt đầu.'
-    );
-  };
+const Fact: React.FC<{ label: string; children: React.ReactNode; wide?: boolean }> = ({ label, children, wide }) => (
+  <div className={`rounded-[10px] border border-line bg-navy-900 p-4 ${wide ? 'sm:col-span-2 lg:col-span-4' : ''}`}>
+    <dt className="text-xs text-subtle">{label}</dt>
+    <dd className="mt-1 min-w-0 text-sm font-medium text-ink">{children}</dd>
+  </div>
+)
+
+/** Renders exactly what the validated manifest says, or a closed state with no fabricated values. */
+export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
+  const available = state.kind === 'available'
+  const loading = state.kind === 'loading'
+  const primary = available ? state.primary : null
+  const manifest = available ? state.manifest : null
 
   return (
-    <section id="download" className="py-24 relative overflow-hidden bg-[#0A0E17]">
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-brand-blue/10 rounded-full blur-[140px] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
-        {/* Main Box */}
-        <div className="rounded-3xl bg-gradient-to-b from-[#0E1528] to-[#0A0F1D] border border-[#202C47] p-8 sm:p-12 shadow-2xl relative overflow-hidden">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            {/* Left Content (7 cols) */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-blue/15 border border-brand-blue/30 text-xs font-semibold text-brand-blue">
-                <Monitor className="w-3.5 h-3.5" />
-                <span>BẢN DÀNH CHO WINDOWS DESKTOP</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                Trải nghiệm AI Desk trên máy tính của bạn
-              </h2>
-
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
-                Phần mềm desktop độc lập được xây dựng để tận dụng tối đa sức mạnh phần cứng máy tính, độ trễ cực thấp và khả năng cách ly bảo mật dữ liệu tuyệt đối trên Windows.
-              </p>
-
-              {/* Specs & Requirements Table */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-[#121A2C] border border-[#1E2942] space-y-1">
-                  <div className="text-slate-400 font-mono text-[11px]">Hệ điều hành:</div>
-                  <div className="font-semibold text-white">Windows 10 / 11</div>
-                  <div className="text-[10px] text-slate-500">64-bit Architecture</div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#121A2C] border border-[#1E2942] space-y-1">
-                  <div className="text-slate-400 font-mono text-[11px]">Yêu cầu RAM:</div>
-                  <div className="font-semibold text-white">Tối thiểu 8GB RAM</div>
-                  <div className="text-[10px] text-slate-500">Khuyên dùng 16GB</div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#121A2C] border border-[#1E2942] space-y-1 col-span-2 sm:col-span-1">
-                  <div className="text-slate-400 font-mono text-[11px]">Runtime nền tảng:</div>
-                  <div className="font-semibold text-white">WebView2 / C++</div>
-                  <div className="text-[10px] text-emerald-400">Tự động cấu hình</div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                <button
-                  onClick={onOpenEarlyAccess}
-                  className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-brand-blue to-brand-indigo hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/20 transition-all hover:scale-[1.01]"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Đăng ký nhận bộ cài đặt Windows</span>
-                </button>
-
-                <button
-                  onClick={handleDownloadClick}
-                  className="px-5 py-3.5 rounded-xl bg-[#141C2E] hover:bg-[#1A253E] border border-[#23314F] text-slate-300 hover:text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Download className="w-4 h-4 text-brand-blue" />
-                  <span>Tải trực tiếp (.exe)</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
-                    Sắp ra mắt
-                  </span>
-                </button>
-              </div>
-
-              {/* Download Notice Box */}
-              {downloadNotice && (
-                <div className="p-4 rounded-xl bg-[#151D30] border border-brand-blue/30 text-xs text-slate-200 space-y-2 animate-fadeIn">
-                  <div className="flex items-center gap-2 text-brand-blue font-semibold">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>Thông tin về đợt phát hành:</span>
-                  </div>
-                  <p className="leading-relaxed text-slate-300">
-                    {downloadNotice}
-                  </p>
-                  <button
-                    onClick={onOpenEarlyAccess}
-                    className="text-xs text-brand-blue hover:underline flex items-center gap-1 font-medium"
-                  >
-                    Mở form đăng ký email ngay <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Không tạo file cài đặt giả. Tôn trọng an toàn bảo mật máy tính người dùng.</span>
-              </div>
-            </div>
-
-            {/* Right Graphic / App Window Card (5 cols) */}
-            <div className="lg:col-span-5">
-              <div className="p-6 rounded-2xl bg-[#080B14] border border-[#1E2940] shadow-xl space-y-4 font-mono text-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-[#161F33]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
-                    <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
-                    <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
-                  </div>
-                  <span className="text-slate-400 text-[11px]">AI Desk Package Status</span>
-                </div>
-
-                <div className="space-y-2 text-[11px] leading-relaxed text-slate-300">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Tên gói:</span>
-                    <span className="text-slate-200">AIDesk-Setup-x64.exe</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Phiên bản:</span>
-                    <span className="text-brand-blue">v0.8.4 (Beta Preview)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Chữ ký số:</span>
-                    <span className="text-emerald-400">Đang thẩm định CodeSign</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Dung lượng ước tính:</span>
-                    <span className="text-slate-200">~68 MB</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Nền tảng mục tiêu:</span>
-                    <span className="text-slate-200">Windows 10/11 64-bit</span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#0F1626] border border-[#1A263D] text-[11px] text-slate-400 space-y-1">
-                  <span className="text-emerald-400 font-semibold">● Cam kết kỹ thuật:</span>
-                  <p>Mã nguồn chạy cục bộ trên máy trạm của bạn. Không chuyển tiếp mã nguồn dự án qua máy chủ trung gian không rõ nguồn gốc.</p>
-                </div>
-              </div>
-            </div>
-
+    <div className="card p-6 sm:p-8" data-download-state={state.kind} aria-busy={loading}>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-navy-900 text-accent-light">
+            <Monitor className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <div>
+            <h3 className="text-xl font-semibold text-white">
+              {manifest ? `AI Desk ${manifest.version}` : 'AI Desk cho Windows'}
+            </h3>
+            <p className="mt-0.5 text-sm text-muted">Bộ cài Windows (.exe)</p>
           </div>
-
         </div>
 
+        <div className="flex flex-col gap-2 lg:items-end">
+          {primary ? (
+            <a href={primary.url} className="btn-primary px-7" rel="noopener">
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Tải bộ cài cho Windows
+            </a>
+          ) : (
+            <button type="button" className="btn-primary px-7" disabled>
+              {loading ? (
+                <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-4 w-4" aria-hidden="true" />
+              )}
+              {loading ? 'Đang kiểm tra bản phát hành…' : 'Đang chuẩn bị phát hành'}
+            </button>
+          )}
+          {!available && (
+            <a href={`#${SECTION_IDS.waitlist}`} className="text-sm text-accent-light hover:underline">
+              Nhận thông báo khi mở tải
+            </a>
+          )}
+        </div>
       </div>
-    </section>
-  );
-};
+
+      <dl className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Fact label="Trạng thái phát hành">
+          {manifest ? (
+            <span className="text-emerald-300">Đã phát hành · {manifest.channel}</span>
+          ) : loading ? (
+            'Đang kiểm tra…'
+          ) : (
+            <span className="text-amber-300">Đang chuẩn bị phát hành</span>
+          )}
+        </Fact>
+        <Fact label="Phiên bản">{manifest ? manifest.version : '—'}</Fact>
+        <Fact label="Dung lượng">{primary ? formatBytes(primary.sizeBytes) : '—'}</Fact>
+        <Fact label="Hệ điều hành">{manifest ? manifest.minOs : 'Windows 10/11, 64-bit'}</Fact>
+        {manifest && primary && (
+          <>
+            <Fact label="Ngày phát hành">{formatDate(manifest.releasedAt)}</Fact>
+            <Fact label="Tệp">
+              <span className="break-all">{primary.fileName}</span>
+            </Fact>
+            <Fact label="Chữ ký số">
+              {primary.signature === 'signed' ? (
+                `Đã ký${primary.signer ? ` — ${primary.signer}` : ''}`
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-amber-300">
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Chưa ký số
+                </span>
+              )}
+            </Fact>
+            <Fact label="Ghi chú phát hành">
+              {manifest.notesUrl ? (
+                <a href={manifest.notesUrl} className="text-accent-light hover:underline" rel="noopener">
+                  Xem ghi chú
+                </a>
+              ) : (
+                '—'
+              )}
+            </Fact>
+          </>
+        )}
+        <Fact label="SHA-256" wide>
+          {primary ? (
+            <div className="flex items-start gap-2">
+              <code className="min-w-0 break-all font-mono text-xs leading-relaxed text-muted">{primary.sha256}</code>
+              <CopyButton value={primary.sha256} />
+            </div>
+          ) : (
+            <span className="text-muted">Sẽ được công bố cùng bản phát hành đã duyệt.</span>
+          )}
+        </Fact>
+      </dl>
+    </div>
+  )
+}
+
+export const DownloadSection: React.FC<{ state: DownloadState }> = ({ state }) => (
+  <section id={SECTION_IDS.download} aria-labelledby="download-title" className="section border-y border-white/[0.06] bg-navy-900">
+    <div className="container-content">
+      <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="max-w-3xl">
+          <p className="eyebrow">Tải về</p>
+          <h2 id="download-title" className="section-title mt-3">
+            Tải AI Desk cho Windows
+          </h2>
+          <p className="section-lead">
+            Miễn phí trong giai đoạn Public Beta, không cần đăng nhập. Bộ cài được phân phối qua Cloudflare kèm mã
+            SHA-256 để bạn tự kiểm tra tệp tải về.
+          </p>
+        </div>
+        <ul className="space-y-2 text-sm">
+          {REQUIREMENTS.map((item) => (
+            <li key={item} className="flex gap-2 text-muted">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-light" aria-hidden="true" />
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="mt-10">
+        <DownloadCard state={state} />
+      </div>
+      <p className="mt-4 text-sm text-subtle">
+        Kiểm tra checksum bằng PowerShell:{' '}
+        <code className="whitespace-nowrap rounded bg-white/[0.05] px-1.5 py-0.5 font-mono text-xs text-ink">
+          Get-FileHash .\tên-tệp.exe
+        </code>
+      </p>
+    </div>
+  </section>
+)

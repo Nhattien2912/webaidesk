@@ -1,0 +1,13 @@
+# Cloudflare Pages response headers.
+# The release manifest (/api/releases/latest) and downloads (/api/download/*) are same-origin
+# Pages Functions over a PRIVATE R2 bucket, so connect-src 'self' is enough. Do not add r2.dev.
+# If a manifest is ever served from another host, add that origin to connect-src.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/releases/*
+  Cache-Control: no-cache

@@ -5,37 +5,31 @@
 
 ## 🚀 Giới thiệu
 
-AI Desk là giải pháp Windows Desktop giúp lập trình viên điều phối và quản lý luồng làm việc giữa các công cụ AI lập trình hàng đầu:
-- **GPT Manager (ChatGPT / Web)**: Quản lý, phân tích bài toán, lập kế hoạch và nghiệm thu kết quả.
-- **OpenAI Codex**: Chuyên trách viết mã, refactor và tạo unit test.
-- **Claude Desktop**: Đọc mã nguồn, đánh giá bảo mật và review diff.
-- **Google Antigravity**: Môi trường IDE AI đồng bộ context.
-- **OpenCode**: Worker mã nguồn mở tùy chọn.
+AI Desk là ứng dụng Windows điều phối GPT Manager (ChatGPT web) và các AI worker (Codex, Claude Code;
+Antigravity/OpenCode đang thử nghiệm). Website định vị theo **Free Public Beta trước, Pro sau**:
+không đăng nhập, không license gate, không thanh toán.
 
-## 🛠️ Công nghệ sử dụng
+## Công nghệ
 
-- **Frontend:** React 19, TypeScript
-- **Styling:** Tailwind CSS, PostCSS
-- **Icons & Animation:** Lucide Icons, Framer Motion
-- **Tooling:** Vite
-- **Deployment:** Cloudflare Pages / Vercel ready
+React 19 · TypeScript · Vite · Tailwind CSS · lucide-react. Backend tuỳ chọn: Cloudflare Pages Functions + D1
+(`functions/`, `server/`, `migrations/`).
 
-## 💻 Khởi chạy môi trường phát triển
+## Lệnh
 
 ```bash
-# Cài đặt dependencies
 npm install
-
-# Chạy dev server tại localhost:5173
-npm run dev
-
-# Build production
-npm run build
+npm run dev        # http://localhost:5173
+npm run check      # typecheck + lint + test + build
 ```
 
-## 🌐 Triển khai lên Cloudflare Pages
+## Cấu trúc
 
-Dự án được cấu hình chuẩn cho Cloudflare Pages:
-- **Framework Preset:** Vite
-- **Build command:** `npm run build`
-- **Output directory:** `dist`
+- `src/components/` — các section của landing page
+- `src/pages/` — Privacy, Terms, Changelog, 404 (Privacy/Terms là **bản nháp cần duyệt**)
+- `src/config/site.ts` — social links, liên hệ, video, release manifest, waitlist (đọc từ `VITE_*`, xem `.env.example`)
+- `src/data/` — nội dung Roadmap và Changelog
+- `src/lib/releaseManifest.ts` — kiểm tra manifest, khoá nút tải khi thiếu/không hợp lệ
+- `server/waitlistHandler.ts`, `functions/api/waitlist.ts` — API nhận tin AI Desk Pro
+- `tests/` — `node --test` (không cần thêm dependency)
+
+Triển khai: xem [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
