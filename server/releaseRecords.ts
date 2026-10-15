@@ -1,7 +1,7 @@
 // AI Desk release records: the ONE reviewed source of release metadata for both the website
 // download (/api/releases/latest, /api/download/*) and the desktop update feed (/api/updates/*).
 //
-// Data lives in server/releases.json and is changed only by scripts/release.mjs (stage / approve /
+// Data lives in server/releaseData.ts and is changed only by scripts/release.mjs (stage / approve /
 // publish / withdraw) plus code review. It is bundled into the Pages Functions at build time, so a
 // publication becomes visible to the website AND the updater in the same deploy (atomic).
 //

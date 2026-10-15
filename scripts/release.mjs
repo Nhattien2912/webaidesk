@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // AI Desk release pipeline: inspect → stage (upload + verify) → approve → publish → (withdraw).
 //
-// Everything is a DRY RUN unless you pass --execute (uploads) or --write (edits server/releases.json).
-// The update feed and the website only change when server/releases.json is reviewed and deployed,
+// Everything is a DRY RUN unless you pass --execute (uploads) or --write (edits server/releaseData.ts).
+// The update feed and the website only change when server/releaseData.ts is reviewed and deployed,
 // so uploading never publishes anything by itself.
 //
 //   node scripts/release.mjs inspect  --dir <electron-builder output dir> [--portable <file.exe>]
@@ -24,7 +24,27 @@ import { fileURLToPath } from 'node:url'
 import { checkCatalog, currentRelease, immutableKey, UPDATE_METADATA_FILE, validateRecord } from '../server/releaseRecords.ts'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-export const RELEASES_FILE = join(ROOT, 'server', 'releases.json')
+export const RELEASES_FILE = join(ROOT, 'server', 'releaseData.ts')
+const BEGIN = '/* RELEASES:BEGIN */'
+const END = '/* RELEASES:END */'
+
+/** Reads the release data (JSON between the markers of server/releaseData.ts). */
+export function readReleaseFile(path = RELEASES_FILE) {
+  const text = readFileSync(path, 'utf8')
+  const a = text.indexOf(BEGIN)
+  const b = text.indexOf(END)
+  if (a < 0 || b < a) throw new Error(`${path}: release data markers not found`)
+  return JSON.parse(text.slice(a + BEGIN.length, b))
+}
+
+/** Rewrites only the JSON between the markers; the rest of the file is kept verbatim. */
+export function writeReleaseFile(data, path = RELEASES_FILE) {
+  const text = readFileSync(path, 'utf8')
+  const a = text.indexOf(BEGIN)
+  const b = text.indexOf(END)
+  if (a < 0 || b < a) throw new Error(`${path}: release data markers not found`)
+  writeFileSync(path, `${text.slice(0, a + BEGIN.length)} ${JSON.stringify(data, null, 2)} ${text.slice(b)}`)
+}
 const BUCKET = 'aidesk-releases'
 
 // ---------------------------------------------------------------- latest.yml
@@ -153,7 +173,7 @@ export async function inspectBuild({ dir, portable, channel = 'stable', minOs = 
     },
   }
   problems.push(...validateRecord(record))
-  const existing = releaseFile ?? JSON.parse(readFileSync(RELEASES_FILE, 'utf8'))
+  const existing = releaseFile ?? readReleaseFile()
   if (existing.releases.some((r) => r.channel === channel && r.version === version)) problems.push(`version ${channel}/${version} already exists (keys are immutable; bump the version)`)
   if (problems.length) throw new Error(problems.join('\n'))
 
@@ -250,12 +270,12 @@ async function main() {
   const opts = args(process.argv.slice(2))
   const cmd = opts._[0]
   const channel = opts.channel ?? 'stable'
-  const file = JSON.parse(readFileSync(RELEASES_FILE, 'utf8'))
+  const file = readReleaseFile()
   const save = (next) => {
     if (opts.write) {
-      writeFileSync(RELEASES_FILE, `${JSON.stringify(next, null, 2)}\n`)
+      writeReleaseFile(next)
       console.log(`Wrote ${RELEASES_FILE}. Review the diff, then deploy to make it live.`)
-    } else console.log('Dry run: releases.json not changed (add --write).')
+    } else console.log('Dry run: releaseData.ts not changed (add --write).')
   }
 
   if (cmd === 'status') {

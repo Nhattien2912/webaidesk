@@ -1,4 +1,4 @@
-// Website-download view of the release records (server/releases.json → server/releaseRecords.ts).
+// Website-download view of the release records (server/releaseData.ts → server/releaseRecords.ts).
 //
 // /api/download/* and /api/releases/latest work on flat ReleaseEntry items; they are DERIVED from
 // the reviewed release records so the website and the desktop update feed always agree. The R2 key
@@ -6,7 +6,7 @@
 // record is published + approved (+ signed unless the server explicitly allows unsigned), and the
 // R2 object matches the recorded size and SHA-256.
 
-import releaseFile from './releases.json' with { type: 'json' }
+import { RELEASE_DATA } from './releaseData.ts'
 import { checkCatalog, currentRelease, DEFAULT_CHANNEL, type ReleaseRecord } from './releaseRecords.ts'
 
 export type ReleaseKind = 'installer' | 'portable'
@@ -57,11 +57,11 @@ export function entriesForRecord(r: ReleaseRecord): ReleaseEntry[] {
   return out
 }
 
-const checked = checkCatalog(releaseFile)
+const checked = checkCatalog(RELEASE_DATA)
 
 /** Structurally valid, conflict-free release records (published or not). */
 export const RELEASE_RECORDS: readonly ReleaseRecord[] = checked.valid
-/** Problems found in server/releases.json (tests assert this is empty). */
+/** Problems found in server/releaseData.ts (tests assert this is empty). */
 export const RELEASE_FILE_ERRORS: readonly string[] = checked.errors
 
 /** All download entries; handleDownload still re-checks status/approval/signature per request. */

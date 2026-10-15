@@ -42,7 +42,7 @@ Hiện trạng đã xác minh: Pages project `webaidesk` (https://webaidesk.page
 branch `main`); R2 bucket `aidesk-releases` **private**, chưa có EXE. Website giữ **fail-closed** cho tới khi có
 bản phát hành được duyệt.
 
-Nguồn metadata duy nhất: `server/releases.json` (quy tắc trong `server/releaseRecords.ts`). Chi tiết pipeline,
+Nguồn metadata duy nhất: `server/releaseData.ts` (quy tắc trong `server/releaseRecords.ts`). Chi tiết pipeline,
 định dạng record, `latest.yml` và cache: xem [RELEASE_PIPELINE.md](RELEASE_PIPELINE.md). Contract updater
 cho Desktop (Phase B, chưa làm): [DESKTOP_UPDATER_PHASE_B.md](DESKTOP_UPDATER_PHASE_B.md).
 

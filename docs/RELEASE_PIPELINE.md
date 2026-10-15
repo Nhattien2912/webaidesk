@@ -5,7 +5,7 @@ contain an updater yet (Phase B, see `DESKTOP_UPDATER_PHASE_B.md`), so **auto-up
 
 ## One source of truth
 
-`server/releases.json` (validated by `server/releaseRecords.ts`) is the only release metadata. It is
+`server/releaseData.ts` (validated by `server/releaseRecords.ts`) is the only release metadata. It is
 changed by `scripts/release.mjs` and code review, and is bundled into the Pages Functions at build
 time. Website and updater read the same records:
 
@@ -20,7 +20,7 @@ time. Website and updater read the same records:
 (`currentRelease()`), so the website and the feed always offer the same version. Publishing or
 withdrawing changes both in the same deploy (atomic).
 
-## Record (server/releases.json)
+## Record (server/releaseData.ts)
 
 ```jsonc
 {
@@ -95,7 +95,7 @@ build (signed) ─► inspect ─► stage (upload + verify, record=staged) ─�
    current for both website and feed after deploy. Installed apps never downgrade (electron-updater
    `allowDowngrade` stays false); they just stop being offered the withdrawn version.
 
-`--write` only edits `server/releases.json`; review the diff and deploy through the normal Pages
+`--write` only edits `server/releaseData.ts`; review the diff and deploy through the normal Pages
 pipeline. Unsigned builds can be staged for internal testing but cannot be approved or published.
 
 ## Cache policy
