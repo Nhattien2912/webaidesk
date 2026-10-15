@@ -303,3 +303,36 @@ test('download config defaults to the same-origin manifest API and the verified 
   assert.equal(siteConfig.release.allowUnsigned, false)
   assert.ok(!siteConfig.release.allowedHosts.some((h) => h.endsWith('r2.dev')))
 })
+
+test('waitlist form with Turnstile: submit locked until solved, retry on failure; unchanged when disabled', async () => {
+  const WaitlistForm = await component('/src/components/WaitlistForm.tsx', 'WaitlistForm')
+  const submitTag = (html: string) => html.match(/<button[^>]*type="submit"[^>]*>/)?.[0] ?? ''
+
+  const off = render(h(WaitlistForm, { turnstileSiteKey: '' }))
+  assert.ok(submitTag(off))
+  assert.ok(!/disabled/.test(submitTag(off)), 'no Turnstile: submit enabled as before')
+  assert.ok(!off.includes('data-turnstile-widget'))
+
+  const loading = render(h(WaitlistForm, { turnstileSiteKey: '1x00000000000000000000AA' }))
+  assert.match(submitTag(loading), /disabled/)
+  assert.match(submitTag(loading), /aria-describedby="[^"]+-captcha"/)
+  assert.match(loading, /data-turnstile-widget/)
+  assert.match(loading, /Đang tải bước xác minh/)
+
+  const solved = render(h(WaitlistForm, { turnstileSiteKey: 'k', initialCaptcha: { status: 'solved', token: 'tok' } }))
+  assert.ok(!/disabled/.test(submitTag(solved)))
+
+  const unavailable = render(h(WaitlistForm, { turnstileSiteKey: 'k', initialCaptcha: { status: 'unavailable' } }))
+  assert.match(unavailable, /Không tải được bước xác minh/)
+  assert.match(unavailable, /Thử lại/)
+  assert.match(submitTag(unavailable), /disabled/)
+  assert.ok(!unavailable.includes('data-turnstile-widget'))
+
+  const failed = render(h(WaitlistForm, { turnstileSiteKey: 'k', initialCaptcha: { status: 'error' } }))
+  assert.match(failed, /Bước xác minh không thành công/)
+  assert.match(failed, /Thử lại/)
+
+  const expired = render(h(WaitlistForm, { turnstileSiteKey: 'k', initialCaptcha: { status: 'expired' } }))
+  assert.match(expired, /đã hết hạn/)
+  assert.match(submitTag(expired), /disabled/)
+})

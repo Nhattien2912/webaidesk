@@ -1,5 +1,5 @@
-import React, { useId, useState } from 'react'
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import React, { useId, useReducer, useState } from 'react'
+import { AlertCircle, CheckCircle2, Loader2, RotateCcw } from 'lucide-react'
 import { siteConfig } from '../config/site'
 import { TurnstileWidget } from './TurnstileWidget'
 import {
@@ -9,6 +9,7 @@ import {
   type SubmitResult,
   type WaitlistErrorCode,
 } from '../lib/waitlistRules'
+import { CAPTCHA_MESSAGES, canSubmit, captchaReducer, initCaptcha, type CaptchaState } from '../lib/captchaState'
 
 type FormStatus =
   | { kind: 'idle' }
@@ -22,6 +23,8 @@ interface WaitlistFormProps {
   /** Injected in tests; defaults to the real network submit. */
   submit?: typeof submitWaitlist
   initialStatus?: FormStatus
+  /** Test hook: start from a given Turnstile state. */
+  initialCaptcha?: Partial<CaptchaState>
 }
 
 export const WaitlistForm: React.FC<WaitlistFormProps> = ({
@@ -29,24 +32,32 @@ export const WaitlistForm: React.FC<WaitlistFormProps> = ({
   turnstileSiteKey = siteConfig.waitlist.turnstileSiteKey,
   submit = submitWaitlist,
   initialStatus = { kind: 'idle' },
+  initialCaptcha,
 }) => {
   const id = useId()
   const [startedAt] = useState(() => Date.now())
   const [email, setEmail] = useState('')
   const [consent, setConsent] = useState(false)
   const [website, setWebsite] = useState('')
-  const [token, setToken] = useState('')
+  const [captcha, dispatch] = useReducer(captchaReducer, Boolean(turnstileSiteKey), (enabled) => ({ ...initCaptcha(enabled), ...initialCaptcha }))
   const [status, setStatus] = useState<FormStatus>(initialStatus)
 
   const emailError = status.kind === 'error' && status.code === 'invalid_email'
   const consentError = status.kind === 'error' && status.code === 'consent_required'
   const busy = status.kind === 'submitting'
+  const captchaReady = canSubmit(captcha)
+  const captchaMessage = captcha.enabled ? CAPTCHA_MESSAGES[captcha.status] : undefined
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (busy) return
     if (!isValidEmail(email)) return setStatus({ kind: 'error', code: 'invalid_email' })
     if (!consent) return setStatus({ kind: 'error', code: 'consent_required' })
+    if (!captchaReady) return setStatus({ kind: 'error', code: 'captcha_failed' })
+    // Turnstile tokens are single-use: take it now and reset the widget before the request returns,
+    // so a failed request can never be retried with the same token.
+    const token = captcha.enabled ? captcha.token : ''
+    if (captcha.enabled) dispatch({ type: 'submitted' })
     setStatus({ kind: 'submitting' })
     const result: SubmitResult = await submit(endpoint, {
       email,
@@ -123,8 +134,19 @@ export const WaitlistForm: React.FC<WaitlistFormProps> = ({
       </div>
 
       {turnstileSiteKey && (
-        <div className="mt-4">
-          <TurnstileWidget siteKey={turnstileSiteKey} onToken={setToken} />
+        <div className="mt-4" data-captcha-status={captcha.status}>
+          {captcha.status !== 'unavailable' && <TurnstileWidget key={captcha.widgetKey} siteKey={turnstileSiteKey} onEvent={dispatch} />}
+          {captchaMessage && (
+            <div id={`${id}-captcha`} className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted" aria-live="polite">
+              <span>{captchaMessage}</span>
+              {(captcha.status === 'error' || captcha.status === 'unavailable' || captcha.status === 'expired') && (
+                <button type="button" onClick={() => dispatch({ type: 'retry' })} className="inline-flex items-center gap-1 font-medium text-accent-light hover:underline">
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Thử lại
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -137,7 +159,12 @@ export const WaitlistForm: React.FC<WaitlistFormProps> = ({
         )}
       </div>
 
-      <button type="submit" className="btn-primary mt-5 w-full" disabled={busy}>
+      <button
+        type="submit"
+        className="btn-primary mt-5 w-full"
+        disabled={busy || !captchaReady}
+        aria-describedby={!captchaReady && captchaMessage ? `${id}-captcha` : undefined}
+      >
         {busy && <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
         {busy ? 'Đang gửi…' : 'Đăng ký nhận tin'}
       </button>

@@ -56,7 +56,10 @@ function fakeDb(opts: { failInsert?: boolean } = {}) {
 }
 
 const NOW = 1_800_000_000_000
-const deps = (verify = true): HandlerDeps => ({ now: () => NOW, verifyTurnstile: async () => verify })
+const deps = (verify = true): HandlerDeps => ({
+  now: () => NOW,
+  verifyTurnstile: async () => (verify ? { kind: 'ok', hostname: 'aidesk.example', action: 'waitlist' } : { kind: 'rejected' }),
+})
 
 function req(body: unknown, init: { method?: string; origin?: string | null; ip?: string; type?: string } = {}) {
   const headers: Record<string, string> = { 'content-type': init.type ?? 'application/json' }
@@ -162,10 +165,11 @@ test('rate limits per hashed IP and never stores the raw IP', async () => {
 
 test('requires a valid Turnstile token only when the secret is configured', async () => {
   const { db } = fakeDb()
-  const failed = await handleWaitlist(req(good()), { DB: db, TURNSTILE_SECRET_KEY: 'k' }, deps(false))
+  const env = { DB: db, TURNSTILE_SECRET_KEY: 'k', TURNSTILE_ALLOWED_HOSTNAMES: 'aidesk.example' }
+  const failed = await handleWaitlist(req({ ...good(), turnstileToken: 'tok' }), env, deps(false))
   assert.equal(failed.status, 400)
   assert.equal(((await failed.json()) as { error: string }).error, 'captcha_failed')
-  const passed = await handleWaitlist(req(good('t@example.com')), { DB: db, TURNSTILE_SECRET_KEY: 'k' }, deps(true))
+  const passed = await handleWaitlist(req({ ...good('t@example.com'), turnstileToken: 'tok' }), env, deps(true))
   assert.equal(passed.status, 200)
 })
 

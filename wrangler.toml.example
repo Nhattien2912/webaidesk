@@ -18,6 +18,9 @@ migrations_dir = "migrations"
 [vars]
 # Optional, comma-separated. Default is same-origin only.
 ALLOWED_ORIGINS = ""
+# Required when TURNSTILE_SECRET_KEY is set (secret: wrangler pages secret put TURNSTILE_SECRET_KEY).
+# Production: "webaidesk.pages.dev"; Preview: "*.webaidesk.pages.dev". Invalid/missing => 503.
+# TURNSTILE_ALLOWED_HOSTNAMES = "webaidesk.pages.dev"
 
 # Private release bucket (never public, no r2.dev). Served only through /api/download/*.
 [[r2_buckets]]

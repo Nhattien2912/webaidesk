@@ -8,6 +8,7 @@ import {
   checkPayload,
   type WaitlistErrorCode,
 } from '../src/lib/waitlistRules.ts'
+import { checkTurnstile, verifyTurnstile, type TurnstileOutcome } from './turnstile.ts'
 
 /** Minimal subset of the Cloudflare D1 API used here. */
 export interface D1Result {
@@ -24,8 +25,13 @@ export interface D1DatabaseLike {
 
 export interface WaitlistEnv {
   DB?: D1DatabaseLike
-  /** Optional: when set, a valid Turnstile token is required. */
+  /** Optional: when set, a valid Turnstile token is required (see server/turnstile.ts). */
   TURNSTILE_SECRET_KEY?: string
+  /**
+   * Required together with TURNSTILE_SECRET_KEY: comma-separated hostnames the challenge may be
+   * solved on (e.g. "webaidesk.pages.dev" or "*.webaidesk.pages.dev"). Invalid or missing => 503.
+   */
+  TURNSTILE_ALLOWED_HOSTNAMES?: string
   /** Optional salt for hashing client IPs (recommended). */
   IP_HASH_SALT?: string
   /** Optional comma-separated list of allowed Origins; defaults to same-origin. */
@@ -34,7 +40,7 @@ export interface WaitlistEnv {
 
 export interface HandlerDeps {
   now: () => number
-  verifyTurnstile: (secret: string, token: string, ip: string) => Promise<boolean>
+  verifyTurnstile: (secret: string, token: string, ip: string) => Promise<TurnstileOutcome>
 }
 
 export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
@@ -45,6 +51,7 @@ const STATUS: Record<WaitlistErrorCode, number> = {
   consent_required: 400,
   rejected: 400,
   captcha_failed: 400,
+  captcha_unavailable: 503,
   rate_limited: 429,
   not_configured: 503,
   server_error: 500,
@@ -84,22 +91,7 @@ function originAllowed(request: Request, env: WaitlistEnv): boolean {
   }
 }
 
-export async function verifyTurnstileToken(secret: string, token: string, ip: string): Promise<boolean> {
-  if (!token) return false
-  const form = new FormData()
-  form.append('secret', secret)
-  form.append('response', token)
-  if (ip) form.append('remoteip', ip)
-  try {
-    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form })
-    const data = (await res.json()) as { success?: boolean }
-    return data.success === true
-  } catch {
-    return false
-  }
-}
-
-const defaultDeps: HandlerDeps = { now: () => Date.now(), verifyTurnstile: verifyTurnstileToken }
+const defaultDeps: HandlerDeps = { now: () => Date.now(), verifyTurnstile: (secret, token, ip) => verifyTurnstile(secret, token, ip) }
 
 export async function handleWaitlist(request: Request, env: WaitlistEnv, deps: HandlerDeps = defaultDeps): Promise<Response> {
   if (request.method !== 'POST') {
@@ -125,10 +117,8 @@ export async function handleWaitlist(request: Request, env: WaitlistEnv, deps: H
   if (!checked.ok) return fail(checked.error)
 
   const ip = request.headers.get('cf-connecting-ip') ?? ''
-  if (env.TURNSTILE_SECRET_KEY) {
-    const valid = await deps.verifyTurnstile(env.TURNSTILE_SECRET_KEY, checked.turnstileToken, ip)
-    if (!valid) return fail('captcha_failed')
-  }
+  const captcha = await checkTurnstile(env, checked.turnstileToken, ip, deps.verifyTurnstile)
+  if (captcha !== 'pass') return fail(captcha)
 
   const db = env.DB
   if (!db) return fail('not_configured')

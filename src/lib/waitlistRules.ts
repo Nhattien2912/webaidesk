@@ -33,6 +33,7 @@ export type WaitlistErrorCode =
   | 'consent_required'
   | 'rejected'
   | 'captcha_failed'
+  | 'captcha_unavailable'
   | 'rate_limited'
   | 'not_configured'
   | 'server_error'
@@ -51,7 +52,8 @@ export function checkPayload(raw: unknown, now: number): PayloadCheck {
   if (typeof body.email !== 'string' || !isValidEmail(body.email)) return { ok: false, error: 'invalid_email' }
   if (body.consent !== true) return { ok: false, error: 'consent_required' }
   const source = typeof body.source === 'string' && /^[a-z0-9-]{1,40}$/.test(body.source) ? body.source : 'website'
-  const turnstileToken = typeof body.turnstileToken === 'string' ? body.turnstileToken.slice(0, 4096) : ''
+  // Never truncate a token: an over-long one must fail verification, not become a different string.
+  const turnstileToken = typeof body.turnstileToken === 'string' ? body.turnstileToken : ''
   return { ok: true, email: normalizeEmail(body.email), source, turnstileToken }
 }
 
@@ -59,7 +61,8 @@ export const WAITLIST_MESSAGES: Record<WaitlistErrorCode, string> = {
   invalid_email: 'Email chưa hợp lệ. Vui lòng kiểm tra lại.',
   consent_required: 'Bạn cần đồng ý nhận email thông báo để đăng ký.',
   rejected: 'Không thể ghi nhận đăng ký này. Vui lòng thử lại sau vài giây.',
-  captcha_failed: 'Không xác minh được bước chống spam. Vui lòng thử lại.',
+  captcha_failed: 'Không xác minh được bước chống spam. Vui lòng làm lại bước xác minh rồi gửi lại.',
+  captcha_unavailable: 'Dịch vụ chống spam tạm thời không phản hồi. Đăng ký của bạn chưa được lưu, vui lòng thử lại.',
   rate_limited: 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.',
   not_configured: 'Hệ thống nhận tin chưa được kích hoạt. Đăng ký của bạn chưa được lưu.',
   server_error: 'Máy chủ gặp lỗi. Đăng ký của bạn chưa được lưu.',

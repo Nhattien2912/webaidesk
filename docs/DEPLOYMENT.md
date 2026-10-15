@@ -20,7 +20,40 @@ Tài liệu này mô tả cấu hình cần có. **Chưa có gì được deploy
 2. Sao chép `wrangler.toml.example` → `wrangler.toml`, điền tên/ID database.
 3. Áp migration: `wrangler d1 migrations apply <DB_NAME> --remote` (`migrations/0001_waitlist.sql`).
 4. Gắn binding `DB` cho Pages project (Settings → Functions → D1 bindings).
-5. Secret (khuyến nghị): `IP_HASH_SALT`; tuỳ chọn `TURNSTILE_SECRET_KEY` + biến build `VITE_TURNSTILE_SITE_KEY`.
+5. Secret bắt buộc trước khi thu email thật: `IP_HASH_SALT` (chuỗi ngẫu nhiên ≥ 256-bit, riêng cho mỗi môi trường).
+6. Turnstile (khuyến nghị mạnh) — xem mục 2.1.
+
+### 2.1 Cloudflare Turnstile
+
+Ba giá trị phải bật **cùng nhau** cho mỗi môi trường (Preview / Production):
+
+| Biến | Loại | Ví dụ |
+|---|---|---|
+| `VITE_TURNSTILE_SITE_KEY` | biến **build** (công khai, đóng gói vào JS) | site key của widget |
+| `TURNSTILE_SECRET_KEY` | **secret** của Functions | secret key của widget |
+| `TURNSTILE_ALLOWED_HOSTNAMES` | biến Functions (không bí mật) | Production: `webaidesk.pages.dev` · Preview: `*.webaidesk.pages.dev` |
+
+1. Cloudflare → Turnstile → **Add widget** (Managed). Hostnames của widget: `webaidesk.pages.dev` (Production)
+   và/hoặc tạo widget riêng cho Preview. Nên dùng widget riêng cho mỗi môi trường.
+2. Pages `webaidesk` → Settings → Variables and Secrets, cho từng môi trường:
+   `VITE_TURNSTILE_SITE_KEY` (plaintext), `TURNSTILE_ALLOWED_HOSTNAMES` (plaintext),
+   `TURNSTILE_SECRET_KEY` (**Encrypt**). Hoặc `wrangler pages secret put TURNSTILE_SECRET_KEY --project-name webaidesk`.
+   Không đưa secret vào Git.
+3. Redeploy (site key được đóng gói lúc build).
+
+Hành vi:
+
+- Không có secret → Turnstile tắt; form giữ cơ chế cũ (honeypot, thời gian điền, rate limit).
+- Có secret nhưng `TURNSTILE_ALLOWED_HOSTNAMES` thiếu hoặc có **bất kỳ** mục sai → `503 not_configured` (fail closed).
+  Chỉ nhận hostname DNS đầy đủ, hoặc wildcard một nhãn dạng `*.webaidesk.pages.dev` (từ chối `*`, `*.dev`,
+  `*.pages.dev`, IP, cổng, scheme).
+- Server chỉ chấp nhận khi siteverify trả `success`, `action = "waitlist"` và `hostname` nằm trong danh sách trên
+  (hostname do Cloudflare báo, không phải do trình duyệt khai). Thiếu token / token hết hạn / dùng lại / hostname sai
+  → `400 captcha_failed`; siteverify lỗi mạng hoặc 5xx → `503 captcha_unavailable`. Không ghi D1 trong các trường hợp này.
+- Frontend: nút gửi bị khóa tới khi có token; mỗi lần gửi (thành công hay lỗi) widget được làm mới nên token không bao
+  giờ bị dùng lại; script không tải được hoặc challenge lỗi → thông báo + nút **Thử lại**.
+- Có site key mà không có secret: token bị bỏ qua (chỉ còn cơ chế cũ). Có secret mà không có site key: mọi lượt gửi
+  bị từ chối. Vì vậy luôn cấu hình đủ cả ba.
 
 API `POST /api/waitlist`:
 
@@ -28,7 +61,9 @@ API `POST /api/waitlist`:
 |---|---|---|
 | Ghi nhận (kể cả email đã có) | 200 | `{"ok":true}` |
 | Email sai / thiếu đồng ý / honeypot / gửi quá nhanh / sai Origin | 400 | `{"ok":false,"error":"invalid_email" \| "consent_required" \| "rejected"}` |
-| Turnstile sai (khi bật) | 400 | `captcha_failed` |
+| Turnstile sai / thiếu / hết hạn / sai hostname (khi bật) | 400 | `captcha_failed` |
+| Siteverify không phản hồi | 503 | `captcha_unavailable` |
+| Bật Turnstile nhưng thiếu/sai `TURNSTILE_ALLOWED_HOSTNAMES` | 503 | `not_configured` |
 | Quá 5 lần/giờ/IP | 429 | `rate_limited` |
 | Chưa gắn D1 | 503 | `not_configured` |
 | Lỗi DB | 500 | `server_error` |
