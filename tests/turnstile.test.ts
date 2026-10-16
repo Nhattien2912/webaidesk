@@ -257,3 +257,16 @@ test('rejected secret is reported as not_configured (503), not as an outage, and
   assert.deepEqual(await res.json(), { ok: false, error: 'not_configured' })
   assert.equal(inserts(), 0)
 })
+
+test('secret with surrounding whitespace is trimmed before siteverify; whitespace-only fails closed', async () => {
+  const allow = 'feature-turnstile-hardening.webaidesk.pages.dev'
+  const seen: string[] = []
+  const verify = async (secret: string): Promise<TurnstileOutcome> => {
+    seen.push(secret)
+    return { kind: 'ok', hostname: allow, action: 'waitlist' }
+  }
+  assert.equal(await checkTurnstile({ TURNSTILE_SECRET_KEY: '  0x4AAAAexample\n', TURNSTILE_ALLOWED_HOSTNAMES: allow }, 'tok', '', verify), 'pass')
+  assert.deepEqual(seen, ['0x4AAAAexample'])
+  assert.equal(await checkTurnstile({ TURNSTILE_SECRET_KEY: ' \n ', TURNSTILE_ALLOWED_HOSTNAMES: allow }, 'tok', '', verify), 'not_configured')
+  assert.equal(seen.length, 1, 'whitespace-only secret never reaches siteverify')
+})

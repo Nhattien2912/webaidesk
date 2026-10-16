@@ -148,10 +148,14 @@ export async function checkTurnstile(
   verify: (secret: string, token: string, ip: string) => Promise<TurnstileOutcome>,
 ): Promise<TurnstileDecision> {
   if (!env.TURNSTILE_SECRET_KEY) return 'pass' // Turnstile not enabled: honeypot + timing + rate limit only.
+  // A secret pasted into the dashboard can carry a trailing newline/space; siteverify rejects that with
+  // HTTP 400 invalid-input-secret (verified against the real endpoint). Whitespace is never part of a key.
+  const secret = env.TURNSTILE_SECRET_KEY.trim()
+  if (!secret) return 'not_configured'
   const allowed = parseAllowedHostnames(env.TURNSTILE_ALLOWED_HOSTNAMES)
   if (!allowed) return 'not_configured' // fail closed: secret without a valid hostname allowlist
   if (!token) return 'captcha_failed'
-  const outcome = await verify(env.TURNSTILE_SECRET_KEY, token, ip)
+  const outcome = await verify(secret, token, ip)
   if (outcome.kind === 'unavailable') return 'captcha_unavailable'
   if (outcome.kind === 'misconfigured') return 'not_configured'
   if (outcome.kind !== 'ok') return 'captcha_failed'
