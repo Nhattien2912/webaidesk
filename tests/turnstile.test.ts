@@ -191,3 +191,69 @@ test('captcha state: gating, expiry, reset after every submit, no token reuse', 
   }
   assert.equal(captchaReducer(s, { type: 'token', token: '' }).status, 'expired')
 })
+
+// ---------------------------------------------------------------- regression: live siteverify behaviour
+// Observed on Preview 2026-10-16: an invalid token got 503 captcha_unavailable in ~0.4 s. Siteverify
+// answers HTTP 400 {"error-codes":["invalid-input-secret"]} when the SECRET is wrong (verified against
+// the real endpoint), and the old code mapped every non-2xx to "unavailable".
+
+test('siteverify classification by status + error codes, with sanitized diagnostics', async () => {
+  const SECRET = 'secret-value-must-never-be-logged'
+  const TOKEN = 'token-value-must-never-be-logged'
+  const IP = '203.0.113.77'
+  const cases: Array<[string, () => Response | Promise<Response>, TurnstileOutcome['kind'], string]> = [
+    ['400 invalid-input-secret', () => jsonRes({ success: false, 'error-codes': ['invalid-input-secret'] }, 400), 'misconfigured', 'secret_rejected'],
+    ['400 missing-input-secret', () => jsonRes({ success: false, 'error-codes': ['missing-input-secret'] }, 400), 'misconfigured', 'secret_rejected'],
+    ['200 invalid-input-response', () => jsonRes({ success: false, 'error-codes': ['invalid-input-response'] }), 'rejected', 'not_success'],
+    ['200 timeout-or-duplicate', () => jsonRes({ success: false, 'error-codes': ['timeout-or-duplicate'] }), 'rejected', 'not_success'],
+    ['400 bad-request', () => jsonRes({ success: false, 'error-codes': ['bad-request'] }, 400), 'rejected', 'bad_request'],
+    ['500 internal-error', () => jsonRes({ success: false, 'error-codes': ['internal-error'] }, 500), 'unavailable', 'http_error'],
+    ['502 html', () => new Response('<html>bad gateway</html>', { status: 502 }), 'unavailable', 'non_json'],
+    ['200 broken JSON', () => new Response('{"success":tr', { status: 200, headers: { 'content-type': 'application/json' } }), 'unavailable', 'non_json'],
+  ]
+  for (const [name, respond, kind, reason] of cases) {
+    const logs: unknown[] = []
+    const outcome = await verifyTurnstile(SECRET, TOKEN, IP, fakeFetch(respond).f, (d) => logs.push(d))
+    assert.equal(outcome.kind, kind, name)
+    assert.equal(logs.length, 1, name)
+    const line = JSON.stringify(logs[0])
+    assert.match(line, new RegExp(`"reason":"${reason}"`), name)
+    for (const sensitive of [SECRET, TOKEN, IP]) assert.ok(!line.includes(sensitive), `${name}: diagnostics leak`)
+  }
+
+  const timeout = (async () => {
+    throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+  }) as typeof fetch
+  const network = (async () => {
+    throw new TypeError('fetch failed')
+  }) as typeof fetch
+  const seen: string[] = []
+  assert.equal((await verifyTurnstile(SECRET, TOKEN, IP, timeout, (d) => seen.push(d.reason))).kind, 'unavailable')
+  assert.equal((await verifyTurnstile(SECRET, TOKEN, IP, network, (d) => seen.push(d.reason))).kind, 'unavailable')
+  assert.deepEqual(seen, ['timeout', 'network'])
+
+  const okLogs: unknown[] = []
+  const ok = await verifyTurnstile(SECRET, TOKEN, IP, fakeFetch(() => jsonRes({ success: true, hostname: 'feature-turnstile-hardening.webaidesk.pages.dev', action: 'waitlist' })).f, (d) => okLogs.push(d))
+  assert.deepEqual(ok, { kind: 'ok', hostname: 'feature-turnstile-hardening.webaidesk.pages.dev', action: 'waitlist' })
+  assert.deepEqual(okLogs, [{ result: 'ok', reason: 'success', status: 200 }])
+
+  const req = fakeFetch(() => jsonRes({ success: true, hostname: 'x.example.com', action: 'waitlist' }))
+  await verifyTurnstile(SECRET, TOKEN, IP, req.f, () => {})
+  const form = req.calls[0]
+  assert.deepEqual([...form.keys()].sort(), ['idempotency_key', 'remoteip', 'response', 'secret'])
+  assert.match(String(form.get('idempotency_key')), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+})
+
+test('rejected secret is reported as not_configured (503), not as an outage, and never writes D1', async () => {
+  const preview = { TURNSTILE_SECRET_KEY: 'k', TURNSTILE_ALLOWED_HOSTNAMES: 'feature-turnstile-hardening.webaidesk.pages.dev' }
+  assert.equal(await checkTurnstile(preview, 'tok', '', outcome({ kind: 'misconfigured' })), 'not_configured')
+  assert.equal(
+    await checkTurnstile(preview, 'tok', '', outcome({ kind: 'ok', hostname: 'feature-turnstile-hardening.webaidesk.pages.dev', action: 'waitlist' })),
+    'pass',
+  )
+  const { db, inserts } = fakeDb()
+  const res = await handleWaitlist(request(body({ turnstileToken: 'tok' })), { DB: db, ...preview }, { now: () => NOW, verifyTurnstile: async () => ({ kind: 'misconfigured' }) })
+  assert.equal(res.status, 503)
+  assert.deepEqual(await res.json(), { ok: false, error: 'not_configured' })
+  assert.equal(inserts(), 0)
+})

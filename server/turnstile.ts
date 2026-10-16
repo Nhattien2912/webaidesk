@@ -14,7 +14,24 @@ const SITEVERIFY_TIMEOUT_MS = 5000
 export type TurnstileOutcome =
   | { kind: 'ok'; hostname: string; action: string }
   | { kind: 'rejected' }
+  /** Siteverify refused OUR configuration (invalid/missing secret): an operator problem, not an outage. */
+  | { kind: 'misconfigured' }
   | { kind: 'unavailable' }
+
+/** Sanitized diagnostics: categories, HTTP status and Cloudflare error codes only (never secret, token, IP or email). */
+export interface SiteverifyDiagnostic {
+  result: TurnstileOutcome['kind']
+  reason: 'success' | 'not_success' | 'secret_rejected' | 'bad_request' | 'http_error' | 'non_json' | 'timeout' | 'network' | 'token_invalid_local'
+  status?: number
+  errorCodes?: string[]
+}
+export type SiteverifyLogger = (d: SiteverifyDiagnostic) => void
+
+/** Default logger: one JSON line in Pages Functions logs. */
+export const logSiteverify: SiteverifyLogger = (d) => console.warn(JSON.stringify({ event: 'turnstile_siteverify', ...d }))
+
+// Codes documented by Cloudflare that mean the SECRET (server configuration) is wrong.
+const SECRET_ERRORS = new Set(['missing-input-secret', 'invalid-input-secret'])
 
 const LABEL = '(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)'
 const EXACT_HOST = new RegExp(`^${LABEL}(?:\\.${LABEL})+$`)
@@ -55,9 +72,47 @@ export function hostnameAllowed(hostname: string, allowed: readonly string[]): b
   })
 }
 
-/** Calls siteverify. Network errors, timeouts and non-JSON answers are "unavailable", never "ok". */
-export async function verifyTurnstile(secret: string, token: string, ip: string, fetchImpl: typeof fetch = fetch): Promise<TurnstileOutcome> {
-  if (!token || token.length > MAX_TOKEN_LENGTH) return { kind: 'rejected' }
+interface SiteverifyBody {
+  success?: unknown
+  hostname?: unknown
+  action?: unknown
+  'error-codes'?: unknown
+}
+
+async function readJson(res: Response): Promise<SiteverifyBody | null> {
+  try {
+    const body: unknown = await res.json()
+    return body && typeof body === 'object' && !Array.isArray(body) ? (body as SiteverifyBody) : null
+  } catch {
+    return null
+  }
+}
+
+function safeErrorCodes(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((c): c is string => typeof c === 'string' && /^[a-z0-9-]{1,48}$/.test(c)).slice(0, 10)
+}
+
+/**
+ * Calls siteverify (POST form: secret, response, remoteip, idempotency_key — per Cloudflare docs).
+ * Siteverify answers HTTP 200 for token verdicts and HTTP 400 with `invalid-input-secret` /
+ * `missing-input-secret` when the secret is wrong, so the body is classified on every status:
+ *   - secret errors (any status)      → misconfigured (503 not_configured, operator must fix the secret)
+ *   - other 4xx / success:false        → rejected (400 captcha_failed)
+ *   - 5xx, non-JSON, network, timeout  → unavailable (503 captcha_unavailable)
+ */
+export async function verifyTurnstile(
+  secret: string,
+  token: string,
+  ip: string,
+  fetchImpl: typeof fetch = fetch,
+  log: SiteverifyLogger = logSiteverify,
+): Promise<TurnstileOutcome> {
+  const done = (d: SiteverifyDiagnostic & { result: 'rejected' | 'misconfigured' | 'unavailable' }): TurnstileOutcome => {
+    log(d)
+    return { kind: d.result }
+  }
+  if (!token || token.length > MAX_TOKEN_LENGTH) return done({ result: 'rejected', reason: 'token_invalid_local' })
   const form = new FormData()
   form.append('secret', secret)
   form.append('response', token)
@@ -67,17 +122,19 @@ export async function verifyTurnstile(secret: string, token: string, ip: string,
   let res: Response
   try {
     res = await fetchImpl(SITEVERIFY_URL, { method: 'POST', body: form, signal: AbortSignal.timeout(SITEVERIFY_TIMEOUT_MS) })
-  } catch {
-    return { kind: 'unavailable' }
+  } catch (e) {
+    const name = e instanceof Error ? e.name : ''
+    return done({ result: 'unavailable', reason: name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'network' })
   }
-  if (!res.ok) return { kind: 'unavailable' }
-  let data: { success?: unknown; hostname?: unknown; action?: unknown }
-  try {
-    data = (await res.json()) as typeof data
-  } catch {
-    return { kind: 'unavailable' }
-  }
-  if (data.success !== true || typeof data.hostname !== 'string') return { kind: 'rejected' }
+  const status = res.status
+  const data = await readJson(res)
+  if (!data) return done({ result: 'unavailable', reason: 'non_json', status })
+  const errorCodes = safeErrorCodes(data['error-codes'])
+  if (errorCodes.some((c) => SECRET_ERRORS.has(c))) return done({ result: 'misconfigured', reason: 'secret_rejected', status, errorCodes })
+  if (status >= 500) return done({ result: 'unavailable', reason: 'http_error', status, errorCodes })
+  if (!res.ok) return done({ result: 'rejected', reason: 'bad_request', status, errorCodes })
+  if (data.success !== true || typeof data.hostname !== 'string') return done({ result: 'rejected', reason: 'not_success', status, errorCodes })
+  log({ result: 'ok', reason: 'success', status })
   return { kind: 'ok', hostname: data.hostname, action: typeof data.action === 'string' ? data.action : '' }
 }
 
@@ -96,6 +153,7 @@ export async function checkTurnstile(
   if (!token) return 'captcha_failed'
   const outcome = await verify(env.TURNSTILE_SECRET_KEY, token, ip)
   if (outcome.kind === 'unavailable') return 'captcha_unavailable'
+  if (outcome.kind === 'misconfigured') return 'not_configured'
   if (outcome.kind !== 'ok') return 'captcha_failed'
   if (outcome.action !== TURNSTILE_ACTION) return 'captcha_failed'
   if (!hostnameAllowed(outcome.hostname, allowed)) return 'captcha_failed'
