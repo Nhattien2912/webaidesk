@@ -160,6 +160,38 @@ test('Public Alpha card opens only for a validated signed manifest and renders i
   assert.ok(available.includes(installer.url))
   assert.ok(available.includes(installer.sha256))
 
+  const archive = {
+    ...installer,
+    kind: 'archive',
+    fileName: 'AI-Desk-0.2-Beta.rar',
+    url: 'https://webaidesk.pages.dev/api/download/AI-Desk-0.2-Beta.rar',
+    sizeBytes: 120193516,
+  }
+  const archiveAvailable = render(
+    h(PublicAlphaDownloadCard, {
+      fallbackVersion: '0.1.0',
+      state: {
+        kind: 'available',
+        primary: archive,
+        manifest: {
+          schemaVersion: 1,
+          channel: 'stable',
+          status: 'published',
+          approved: true,
+          version: '0.2.0-beta',
+          releasedAt: '2026-10-18T00:00:00.000Z',
+          minOs: 'Windows 10/11 64-bit',
+          files: [archive],
+        },
+      },
+    }),
+  )
+  assert.match(archiveAvailable, /Tải AI Desk cho Windows/)
+  assert.match(archiveAvailable, /Windows x64 · v0\.2 Beta/)
+  assert.match(archiveAvailable, /120\.19 MB/)
+  assert.match(archiveAvailable, /RAR/)
+  assert.ok(archiveAvailable.includes(archive.url))
+
   const unsigned = render(
     h(PublicAlphaDownloadCard, {
       fallbackVersion: '0.2.0',
@@ -221,6 +253,36 @@ test('DownloadCard: unavailable state disables the CTA; available state shows ma
   assert.ok(open.includes(sha))
   assert.match(open, /114\.6 MB/)
   assert.ok(open.includes(`href="${primary.url}"`))
+
+  const archivePrimary = {
+    ...primary,
+    kind: 'archive',
+    fileName: 'AI-Desk-0.2-Beta.rar',
+    url: 'https://downloads.example.com/AI-Desk-0.2-Beta.rar',
+    sizeBytes: 120193516,
+  }
+  const archiveOpen = render(
+    h(DownloadCard, {
+      state: {
+        kind: 'available',
+        primary: archivePrimary,
+        manifest: {
+          schemaVersion: 1,
+          channel: 'public-beta',
+          status: 'published',
+          approved: true,
+          version: '0.2.0-beta',
+          releasedAt: '2026-11-01',
+          minOs: 'Windows 10/11 64-bit',
+          files: [archivePrimary],
+        },
+      },
+    }),
+  )
+  assert.match(archiveOpen, /AI Desk 0\.2 Beta/)
+  assert.match(archiveOpen, /120\.19 MB/)
+  assert.match(archiveOpen, /Gói tải Windows \(RAR\)/)
+  assert.match(archiveOpen, /Tải AI Desk cho Windows/)
 })
 
 test('waitlist form: consent, labels and honeypot; success text only in success state', async () => {

@@ -13,6 +13,7 @@ import {
   type R2ObjectLike,
 } from '../server/downloadHandler.ts'
 import { RELEASE_CATALOG, type ReleaseEntry } from '../server/releaseCatalog.ts'
+import { BETA_ARCHIVE_TARGET } from '../server/archivePolicy.ts'
 import { loadDownloadState, validateReleaseManifest } from '../src/lib/releaseManifest.ts'
 
 const ORIGIN = 'https://webaidesk.pages.dev'
@@ -42,6 +43,7 @@ function entry(overrides: Partial<ReleaseEntry> = {}): ReleaseEntry {
 
 interface FakeObject {
   bytes: Uint8Array
+  reportedSize?: number
   meta?: Record<string, string>
   checksum?: ArrayBuffer
   etag?: string
@@ -51,7 +53,7 @@ function bucket(objects: Record<string, FakeObject>, opts: { throwOn?: 'head' | 
   const calls: Array<{ op: string; key: string; range?: { offset: number; length?: number } }> = []
   const meta = (key: string, o: FakeObject): R2ObjectLike => ({
     key,
-    size: o.bytes.length,
+    size: o.reportedSize ?? o.bytes.length,
     httpEtag: o.etag ?? '"etag-1"',
     uploaded: new Date('2026-11-01T00:00:00Z'),
     customMetadata: o.meta,
@@ -86,6 +88,26 @@ function bucket(objects: Record<string, FakeObject>, opts: { throwOn?: 'head' | 
 }
 
 const goodObjects = (): Record<string, FakeObject> => ({ [KEY]: { bytes: BYTES, meta: { sha256: SHA } } })
+
+function archiveEntry(overrides: Partial<ReleaseEntry> = {}): ReleaseEntry {
+  return entry({
+    kind: 'archive',
+    fileName: BETA_ARCHIVE_TARGET.fileName,
+    r2Key: BETA_ARCHIVE_TARGET.r2Key,
+    version: BETA_ARCHIVE_TARGET.version,
+    sizeBytes: BETA_ARCHIVE_TARGET.sizeBytes,
+    sha256: BETA_ARCHIVE_TARGET.sha256,
+    ...overrides,
+  })
+}
+
+const archiveObjects = (): Record<string, FakeObject> => ({
+  [BETA_ARCHIVE_TARGET.r2Key]: {
+    bytes: BYTES,
+    reportedSize: BETA_ARCHIVE_TARGET.sizeBytes,
+    meta: { sha256: BETA_ARCHIVE_TARGET.sha256 },
+  },
+})
 
 function req(path: string, init: { method?: string; headers?: Record<string, string> } = {}) {
   return new Request(`${ORIGIN}${path}`, { method: init.method ?? 'GET', headers: init.headers })
@@ -130,6 +152,60 @@ test('HEAD returns headers only and never reads the body', async () => {
   assert.equal(res.headers.get('content-length'), String(BYTES.length))
   assert.equal((await body(res)).length, 0)
   assert.ok(!calls.some((c) => c.op === 'get'))
+})
+
+test('exact allowlisted RAR streams with archive headers only after all release gates pass', async () => {
+  const { b, calls } = bucket(archiveObjects())
+  const catalog = [archiveEntry()]
+  const get = await download({ RELEASES: b }, BETA_ARCHIVE_TARGET.fileName, undefined, catalog)
+  assert.equal(get.status, 200)
+  assert.equal(get.headers.get('content-type'), BETA_ARCHIVE_TARGET.contentType)
+  assert.equal(get.headers.get('content-disposition'), `attachment; filename="${BETA_ARCHIVE_TARGET.fileName}"`)
+  assert.equal(get.headers.get('content-length'), String(BETA_ARCHIVE_TARGET.sizeBytes))
+  assert.equal(get.headers.get('x-aidesk-sha256'), BETA_ARCHIVE_TARGET.sha256)
+  assert.ok(calls.every((call) => call.key === BETA_ARCHIVE_TARGET.r2Key))
+
+  const head = await download({ RELEASES: b }, BETA_ARCHIVE_TARGET.fileName, { method: 'HEAD' }, catalog)
+  assert.equal(head.status, 200)
+  assert.equal((await body(head)).length, 0)
+})
+
+test('RAR allowlist and normal approval gates fail closed before any R2 access', async () => {
+  const { b, calls } = bucket(archiveObjects())
+  const cases: ReleaseEntry[] = [
+    archiveEntry({ r2Key: `${BETA_ARCHIVE_TARGET.r2Key}.other` }),
+    archiveEntry({ version: '0.3.0-beta' }),
+    archiveEntry({ sizeBytes: BETA_ARCHIVE_TARGET.sizeBytes - 1 }),
+    archiveEntry({ sha256: 'b'.repeat(64) }),
+    archiveEntry({ signature: 'unsigned' }),
+    archiveEntry({ approved: false }),
+    archiveEntry({ status: 'unpublished' }),
+  ]
+  for (const candidate of cases) {
+    const response = await download({ RELEASES: b }, candidate.fileName, undefined, [candidate])
+    assert.equal(response.status, 404)
+  }
+  assert.equal(calls.length, 0)
+})
+
+test('RAR cannot use the legacy unsigned development override', async () => {
+  const { b, calls } = bucket(archiveObjects())
+  const response = await download(
+    { RELEASES: b, ALLOW_UNSIGNED_DOWNLOAD: 'true', NODE_ENV: 'development' },
+    BETA_ARCHIVE_TARGET.fileName,
+    undefined,
+    [archiveEntry({ signature: 'unsigned', signer: undefined })],
+  )
+  assert.equal(response.status, 404)
+  assert.equal(calls.length, 0)
+})
+
+test('latest manifest selects the allowlisted RAR as the website primary', () => {
+  const manifest = latestManifest([archiveEntry(), entry()], ORIGIN, {})
+  assert.equal(manifest?.version, '0.2.0-beta')
+  assert.equal(manifest?.files[0]?.kind, 'archive')
+  assert.equal(manifest?.files[0]?.fileName, BETA_ARCHIVE_TARGET.fileName)
+  assert.equal(validateReleaseManifest(manifest, { allowedHosts: ['webaidesk.pages.dev'], allowUnsigned: false }).ok, true)
 })
 
 // ---------- Range ----------

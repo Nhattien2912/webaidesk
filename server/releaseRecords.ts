@@ -8,6 +8,8 @@
 // A record is servable only when it passes validateRecord() and is published + approved + signed.
 // Anything malformed, duplicated or incomplete is excluded (fail closed).
 
+import { BETA_ARCHIVE_TARGET } from './archivePolicy.ts'
+
 export const RELEASE_CHANNELS = ['stable'] as const
 export type ReleaseChannel = (typeof RELEASE_CHANNELS)[number]
 export const DEFAULT_CHANNEL: ReleaseChannel = 'stable'
@@ -32,6 +34,10 @@ export interface InstallerArtifact extends ArtifactRef {
   blockmap: ArtifactRef
 }
 
+export interface ArchiveArtifact extends ArtifactRef {
+  format: 'rar'
+}
+
 export interface ReleaseRecord {
   version: string
   channel: ReleaseChannel
@@ -51,6 +57,8 @@ export interface ReleaseRecord {
     updateMetadata: ArtifactRef
     /** Portable exe: website download only, never offered by the updater. */
     portable?: ArtifactRef
+    /** Exact allowlisted RAR: website download only, never offered by the updater. */
+    archive?: ArchiveArtifact
   }
 }
 
@@ -108,6 +116,18 @@ function checkArtifact(raw: unknown, channel: string, version: string, label: st
   return errors
 }
 
+function checkArchive(raw: unknown, version: string): string[] {
+  if (!isRecordObj(raw)) return ['archive missing']
+  const errors: string[] = []
+  const expected = { ...BETA_ARCHIVE_TARGET, format: 'rar' } as const
+  if (version !== BETA_ARCHIVE_TARGET.version) errors.push(`archive requires release version ${BETA_ARCHIVE_TARGET.version}`)
+  for (const [field, value] of Object.entries(expected)) {
+    if (field === 'contentType' || field === 'version') continue
+    if (raw[field] !== value) errors.push(`archive.${field} does not match the allowlisted artifact`)
+  }
+  return errors
+}
+
 /** Structural validation of one record. Returns a list of problems (empty = valid). */
 export function validateRecord(raw: unknown): string[] {
   if (!isRecordObj(raw)) return ['record is not an object']
@@ -138,6 +158,7 @@ export function validateRecord(raw: unknown): string[] {
     errors.push('updateMetadata too large')
   }
   if (artifacts.portable !== undefined) errors.push(...checkArtifact(artifacts.portable, ch, v, 'portable', EXE_NAME))
+  if (artifacts.archive !== undefined) errors.push(...checkArchive(artifacts.archive, v))
   return errors
 }
 
@@ -163,8 +184,9 @@ export function checkCatalog(file: unknown): CatalogCheck {
   const bump = (k: string) => count.set(k, (count.get(k) ?? 0) + 1)
   const keysOf = (r: ReleaseRecord) => {
     const a = r.artifacts
-    const files = [a.installer, a.installer.blockmap, a.updateMetadata, ...(a.portable ? [a.portable] : [])]
-    return [`version:${r.channel}/${r.version}`, ...files.map((f) => `key:${f.r2Key}`), ...[a.installer, ...(a.portable ? [a.portable] : [])].map((f) => `file:${f.fileName}`)]
+    const files = [a.installer, a.installer.blockmap, a.updateMetadata, ...(a.portable ? [a.portable] : []), ...(a.archive ? [a.archive] : [])]
+    const downloads = [a.installer, ...(a.portable ? [a.portable] : []), ...(a.archive ? [a.archive] : [])]
+    return [`version:${r.channel}/${r.version}`, ...files.map((f) => `key:${f.r2Key}`), ...downloads.map((f) => `file:${f.fileName}`)]
   }
   ok.forEach((r) => keysOf(r).forEach(bump))
   const valid = ok.filter((r) => {

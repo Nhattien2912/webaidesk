@@ -9,7 +9,7 @@
 import { RELEASE_DATA } from './releaseData.ts'
 import { checkCatalog, currentRelease, DEFAULT_CHANNEL, type ReleaseRecord } from './releaseRecords.ts'
 
-export type ReleaseKind = 'installer' | 'portable'
+export type ReleaseKind = 'installer' | 'portable' | 'archive'
 
 export interface ReleaseEntry {
   /** Public file name, also the URL segment: /api/download/<fileName>. */
@@ -33,7 +33,7 @@ export interface ReleaseEntry {
   approved: boolean
 }
 
-/** Flat download entries (installer + optional portable) of one release record. */
+/** Flat download entries (optional archive + installer + optional portable) of one release record. */
 export function entriesForRecord(r: ReleaseRecord): ReleaseEntry[] {
   const common = {
     version: r.version,
@@ -47,10 +47,12 @@ export function entriesForRecord(r: ReleaseRecord): ReleaseEntry[] {
     status: r.status === 'published' ? ('published' as const) : ('unpublished' as const),
     approved: r.approved,
   }
-  const { installer, portable } = r.artifacts
-  const out: ReleaseEntry[] = [
-    { ...common, kind: 'installer', fileName: installer.fileName, r2Key: installer.r2Key, sizeBytes: installer.sizeBytes, sha256: installer.sha256 },
-  ]
+  const { archive, installer, portable } = r.artifacts
+  const out: ReleaseEntry[] = []
+  if (archive) {
+    out.push({ ...common, kind: 'archive', fileName: archive.fileName, r2Key: archive.r2Key, sizeBytes: archive.sizeBytes, sha256: archive.sha256 })
+  }
+  out.push({ ...common, kind: 'installer', fileName: installer.fileName, r2Key: installer.r2Key, sizeBytes: installer.sizeBytes, sha256: installer.sha256 })
   if (portable) {
     out.push({ ...common, kind: 'portable', fileName: portable.fileName, r2Key: portable.r2Key, sizeBytes: portable.sizeBytes, sha256: portable.sha256 })
   }

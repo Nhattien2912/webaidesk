@@ -10,6 +10,7 @@
 
 import { validateReleaseManifest, type ReleaseManifest } from '../src/lib/releaseManifest.ts'
 import { currentCatalog, RELEASE_CATALOG, type ReleaseEntry } from './releaseCatalog.ts'
+import { BETA_ARCHIVE_TARGET } from './archivePolicy.ts'
 
 /** Minimal subset of the Workers R2 API used here. */
 export interface R2ObjectLike {
@@ -41,7 +42,7 @@ export interface DownloadDeps {
 const defaultDeps: DownloadDeps = { catalog: RELEASE_CATALOG }
 
 export const DOWNLOAD_PATH = '/api/download/'
-export const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.exe$/
+export const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.(?:exe|rar)$/i
 
 type ErrorCode =
   | 'method_not_allowed'
@@ -115,18 +116,30 @@ function manifestFor(entries: readonly ReleaseEntry[], origin: string): unknown 
 /** An entry is downloadable only if it passes the same checks the website applies to a manifest. */
 export function isDownloadable(entry: ReleaseEntry, origin: string, env: DownloadEnv): boolean {
   if (!FILE_NAME.test(entry.fileName) || !safeKey(entry.r2Key)) return false
+  if (
+    entry.kind === 'archive' &&
+    (entry.version !== BETA_ARCHIVE_TARGET.version ||
+      entry.fileName !== BETA_ARCHIVE_TARGET.fileName ||
+      entry.r2Key !== BETA_ARCHIVE_TARGET.r2Key ||
+      entry.sizeBytes !== BETA_ARCHIVE_TARGET.sizeBytes ||
+      entry.sha256.toLowerCase() !== BETA_ARCHIVE_TARGET.sha256)
+  ) {
+    return false
+  }
+  // Unlike legacy EXE development fixtures, the allowlisted archive never has an unsigned override.
+  if (entry.kind === 'archive' && entry.signature !== 'signed') return false
   if (entry.status !== 'published' || entry.approved !== true) return false
   const host = new URL(origin).hostname.toLowerCase()
-  // Validate the file on its own; a manifest needs an installer, so a portable entry is checked as one.
-  const asInstaller: ReleaseEntry = { ...entry, kind: 'installer' }
-  return validateReleaseManifest(manifestFor([asInstaller], origin), { allowedHosts: [host], allowUnsigned: allowUnsigned(env) }).ok
+  // Validate portable files as installer-shaped singletons; archive is a valid website primary.
+  const asPrimary: ReleaseEntry = entry.kind === 'portable' ? { ...entry, kind: 'installer' } : entry
+  return validateReleaseManifest(manifestFor([asPrimary], origin), { allowedHosts: [host], allowUnsigned: allowUnsigned(env) }).ok
 }
 
 /** Latest downloadable release (newest releasedAt) as a website manifest, or null. */
 export function latestManifest(catalog: readonly ReleaseEntry[], origin: string, env: DownloadEnv): ReleaseManifest | null {
   const ok = catalog.filter((e) => isDownloadable(e, origin, env))
-  const installers = ok.filter((e) => e.kind === 'installer').sort((a, b) => Date.parse(b.releasedAt) - Date.parse(a.releasedAt))
-  const newest = installers[0]
+  const primaries = ok.filter((e) => e.kind === 'archive' || e.kind === 'installer').sort((a, b) => Date.parse(b.releasedAt) - Date.parse(a.releasedAt))
+  const newest = primaries[0]
   if (!newest) return null
   const sameVersion = ok.filter((e) => e.version === newest.version && e.channel === newest.channel)
   const ordered = [newest, ...sameVersion.filter((e) => e !== newest)]
@@ -278,7 +291,7 @@ export async function handleDownload(
     fileName: entry.fileName,
     sizeBytes: entry.sizeBytes,
     sha256: entry.sha256,
-    contentType: 'application/octet-stream',
+    contentType: entry.kind === 'archive' ? BETA_ARCHIVE_TARGET.contentType : 'application/octet-stream',
     disposition: 'attachment',
   })
 }

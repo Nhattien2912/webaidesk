@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { AlertTriangle, Check, Copy, Download, Loader2, Monitor } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import { formatBytes, type DownloadState } from '../lib/releaseManifest'
+import { formatReleaseFileSize, formatReleaseVersion, type DownloadState } from '../lib/releaseManifest'
 
 const REQUIREMENTS = ['Windows 10 hoặc 11, 64-bit', 'ChatGPT web cho GPT Manager', 'Codex hoặc Claude Code làm worker']
 
@@ -57,9 +57,9 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
           </span>
           <div>
             <h3 className="text-xl font-semibold text-white">
-              {manifest ? `AI Desk ${manifest.version}` : 'AI Desk cho Windows'}
+              {manifest && primary ? `AI Desk ${formatReleaseVersion(manifest.version, primary.kind)}` : 'AI Desk cho Windows'}
             </h3>
-            <p className="mt-0.5 text-sm text-muted">Bộ cài Windows (.exe)</p>
+            <p className="mt-0.5 text-sm text-muted">{primary?.kind === 'archive' ? 'Gói tải Windows (RAR)' : 'Bộ cài Windows (.exe)'}</p>
           </div>
         </div>
 
@@ -67,7 +67,7 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
           {primary ? (
             <a href={primary.url} className="btn-primary px-7" rel="noopener">
               <Download className="h-4 w-4" aria-hidden="true" />
-              Tải bộ cài cho Windows
+              Tải AI Desk cho Windows
             </a>
           ) : (
             <button type="button" className="btn-primary px-7" disabled>
@@ -97,8 +97,8 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
             <span className="text-amber-300">Đang chuẩn bị phát hành</span>
           )}
         </Fact>
-        <Fact label="Phiên bản">{manifest ? manifest.version : '—'}</Fact>
-        <Fact label="Dung lượng">{primary ? formatBytes(primary.sizeBytes) : '—'}</Fact>
+        <Fact label="Phiên bản">{manifest && primary ? formatReleaseVersion(manifest.version, primary.kind) : '—'}</Fact>
+        <Fact label="Dung lượng">{primary ? formatReleaseFileSize(primary) : '—'}</Fact>
         <Fact label="Hệ điều hành">{manifest ? manifest.minOs : 'Windows 10/11, 64-bit'}</Fact>
         {manifest && primary && (
           <>
@@ -106,6 +106,7 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
             <Fact label="Tệp">
               <span className="break-all">{primary.fileName}</span>
             </Fact>
+            <Fact label="Định dạng">{primary.kind === 'archive' ? 'RAR' : 'EXE'}</Fact>
             <Fact label="Chữ ký số">
               {primary.signature === 'signed' ? (
                 `Đã ký${primary.signer ? ` — ${primary.signer}` : ''}`
@@ -170,7 +171,7 @@ export const DownloadSection: React.FC<{ state: DownloadState }> = ({ state }) =
       <p className="mt-4 text-sm text-subtle">
         Kiểm tra checksum bằng PowerShell:{' '}
         <code className="whitespace-nowrap rounded bg-white/[0.05] px-1.5 py-0.5 font-mono text-xs text-ink">
-          Get-FileHash .\tên-tệp.exe
+          Get-FileHash .\tên-tệp-tải-về
         </code>
       </p>
       <a href="/download" className="mt-5 inline-flex text-sm font-medium text-accent-light hover:underline">

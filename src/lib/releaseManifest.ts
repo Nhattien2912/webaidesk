@@ -3,7 +3,7 @@
 // download card comes from a manifest that passed validateReleaseManifest().
 
 export type SignatureStatus = 'signed' | 'unsigned'
-export type ReleaseFileKind = 'installer' | 'portable'
+export type ReleaseFileKind = 'installer' | 'portable' | 'archive'
 
 export interface ReleaseFile {
   kind: ReleaseFileKind
@@ -53,9 +53,10 @@ function nonEmptyString(value: unknown, max = 300): value is string {
 function checkFile(raw: unknown, policy: ValidationPolicy): ReleaseFile | string {
   if (!isRecord(raw)) return 'file entry is not an object'
   const { kind, fileName, url, sizeBytes, sha256, signature, signer } = raw
-  if (kind !== 'installer' && kind !== 'portable') return 'file.kind must be installer or portable'
-  if (!nonEmptyString(fileName, 200) || !/\.exe$/i.test(fileName) || /[\\/]/.test(fileName)) {
-    return 'file.fileName must be a plain .exe file name'
+  if (kind !== 'installer' && kind !== 'portable' && kind !== 'archive') return 'file.kind must be installer, portable or archive'
+  const expectedExtension = kind === 'archive' ? /\.rar$/i : /\.exe$/i
+  if (!nonEmptyString(fileName, 200) || !expectedExtension.test(fileName) || /[\\/]/.test(fileName)) {
+    return `file.fileName must be a plain ${kind === 'archive' ? '.rar' : '.exe'} file name`
   }
   if (!nonEmptyString(url, 2048)) return 'file.url missing'
   let parsed: URL
@@ -118,8 +119,8 @@ export function validateReleaseManifest(raw: unknown, policy: ValidationPolicy):
     if (typeof checked === 'string') return { ok: false, reason: checked }
     files.push(checked)
   }
-  const primary = files.find((f) => f.kind === 'installer')
-  if (!primary) return { ok: false, reason: 'no installer file' }
+  const primary = files.find((f) => f.kind === 'archive') ?? files.find((f) => f.kind === 'installer')
+  if (!primary) return { ok: false, reason: 'no installer or archive file' }
   const manifest: ReleaseManifest = {
     schemaVersion: 1,
     channel: raw.channel,
@@ -139,6 +140,16 @@ export function formatBytes(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${bytes} B`
+}
+
+/** Archive downloads use the decimal size shown by R2; executable sizes retain the existing binary display. */
+export function formatReleaseFileSize(file: Pick<ReleaseFile, 'kind' | 'sizeBytes'>): string {
+  return file.kind === 'archive' ? `${(file.sizeBytes / 1_000_000).toFixed(2)} MB` : formatBytes(file.sizeBytes)
+}
+
+export function formatReleaseVersion(version: string, kind: ReleaseFileKind): string {
+  const beta = kind === 'archive' ? /^(\d+)\.(\d+)\.0-beta$/i.exec(version) : null
+  return beta ? `${beta[1]}.${beta[2]} Beta` : version
 }
 
 export type DownloadState =

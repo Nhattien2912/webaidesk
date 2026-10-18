@@ -2,7 +2,7 @@ import React from 'react'
 import { AlertTriangle, Check, Download, ExternalLink, Globe2, Loader2, Monitor, ShieldCheck } from 'lucide-react'
 import { publicAlphaRelease } from '../data/publicAlphaRelease'
 import { siteConfig } from '../config/site'
-import { formatBytes, validateReleaseManifest, type DownloadState } from '../lib/releaseManifest'
+import { formatReleaseFileSize, formatReleaseVersion, validateReleaseManifest, type DownloadState } from '../lib/releaseManifest'
 import { useDownloadState } from '../lib/useDownloadState'
 
 const List: React.FC<{ items: readonly string[]; tone?: 'positive' | 'warning' }> = ({ items, tone = 'positive' }) => (
@@ -66,18 +66,24 @@ export const PublicAlphaDownloadCard: React.FC<{ state: DownloadState; fallbackV
       <p className={`mt-4 text-sm font-medium ${available ? 'text-emerald-200' : 'text-amber-200'}`}>
         {available ? 'Sẵn sàng tải' : 'Coming Soon'}
       </p>
-      <p className="mt-1 text-sm text-muted">Windows x64 · v{manifest?.version ?? fallbackVersion}</p>
+      <p className="mt-1 text-sm text-muted">
+        Windows x64 · v{manifest && installer ? formatReleaseVersion(manifest.version, installer.kind) : fallbackVersion}
+      </p>
 
       {installer && manifest ? (
         <>
           <a href={installer.url} className="btn-primary mt-5 w-full" rel="noopener">
             <Download className="h-4 w-4" aria-hidden="true" />
-            Tải bộ cài cho Windows
+            Tải AI Desk cho Windows
           </a>
           <dl className="mt-5 space-y-2 border-t border-line pt-4 text-left text-xs">
             <div className="flex justify-between gap-3">
               <dt className="text-subtle">Dung lượng</dt>
-              <dd className="text-ink">{formatBytes(installer.sizeBytes)}</dd>
+              <dd className="text-ink">{formatReleaseFileSize(installer)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-subtle">Định dạng</dt>
+              <dd className="text-ink">{installer.kind === 'archive' ? 'RAR' : 'EXE'}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-subtle">Phát hành</dt>

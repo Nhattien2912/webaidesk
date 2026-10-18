@@ -1,6 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { formatBytes, loadDownloadState, validateReleaseManifest } from '../src/lib/releaseManifest.ts'
+import {
+  formatBytes,
+  formatReleaseFileSize,
+  formatReleaseVersion,
+  loadDownloadState,
+  validateReleaseManifest,
+} from '../src/lib/releaseManifest.ts'
 
 const policy = { allowedHosts: ['downloads.example.com'], allowUnsigned: false }
 
@@ -37,6 +43,25 @@ test('accepts a complete, approved, signed manifest', () => {
   }
 })
 
+test('accepts a signed approved RAR as the primary and formats its verified metadata', () => {
+  const raw = manifest(
+    { version: '0.2.0-beta' },
+    {
+      kind: 'archive',
+      fileName: 'AI-Desk-0.2-Beta.rar',
+      url: 'https://downloads.example.com/AI-Desk-0.2-Beta.rar',
+      sizeBytes: 120_193_516,
+    },
+  )
+  const result = validateReleaseManifest(raw, policy)
+  assert.equal(result.ok, true)
+  if (result.ok) {
+    assert.equal(result.primary.kind, 'archive')
+    assert.equal(formatReleaseFileSize(result.primary), '120.19 MB')
+    assert.equal(formatReleaseVersion(result.manifest.version, result.primary.kind), '0.2 Beta')
+  }
+})
+
 const rejects: Array<[string, unknown]> = [
   ['non-object', 'nope'],
   ['wrong schema', manifest({ schemaVersion: 2 })],
@@ -54,6 +79,8 @@ const rejects: Array<[string, unknown]> = [
   ['zero size', manifest({}, { sizeBytes: 0 })],
   ['fractional size', manifest({}, { sizeBytes: 1.5 })],
   ['not exe', manifest({}, { fileName: 'setup.zip' })],
+  ['archive with exe name', manifest({}, { kind: 'archive' })],
+  ['installer with rar name', manifest({}, { fileName: 'setup.rar' })],
   ['path in name', manifest({}, { fileName: '../setup.exe' })],
   ['unsigned', manifest({}, { signature: 'unsigned' })],
   ['portable only', manifest({}, { kind: 'portable' })],
