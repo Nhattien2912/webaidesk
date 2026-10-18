@@ -5,7 +5,7 @@ import { mainNav, SECTION_IDS, type NavItem } from '../config/navigation'
 import { useDialog } from '../lib/useDialog'
 
 // Dropdown menu for nav items with children
-const NavDropdown: React.FC<{ item: NavItem; onClose: () => void }> = ({ item, onClose }) => {
+const NavDropdown: React.FC<{ item: NavItem; onClose: () => void; activePath: string }> = ({ item, onClose, activePath }) => {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -34,7 +34,7 @@ const NavDropdown: React.FC<{ item: NavItem; onClose: () => void }> = ({ item, o
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-brand-ice hover:text-brand-navy"
+        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-brand-ice hover:text-brand-navy ${item.children?.some((child) => child.href === activePath) ? 'bg-brand-ice text-brand-navy' : 'text-slate-600'}`}
       >
         {item.label}
         <ChevronDown
@@ -51,12 +51,13 @@ const NavDropdown: React.FC<{ item: NavItem; onClose: () => void }> = ({ item, o
             <a
               key={child.href}
               href={child.href}
+              aria-current={child.href === activePath ? 'page' : undefined}
               role="menuitem"
               onClick={() => {
                 setOpen(false)
                 onClose()
               }}
-              className="block rounded-lg px-4 py-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-brand-ice hover:text-brand-navy"
+              className={`block rounded-lg px-4 py-2.5 text-[13px] font-medium transition-colors hover:bg-brand-ice hover:text-brand-navy ${child.href === activePath ? 'bg-brand-ice text-brand-navy' : 'text-slate-600'}`}
             >
               {child.label}
             </a>
@@ -75,22 +76,24 @@ export const Navbar: React.FC = () => {
     setMobileExpanded(null)
   }
   const panelRef = useDialog<HTMLDivElement>(menuOpen, close)
+  const activePath = typeof window === 'undefined' ? '' : window.location.pathname
 
   return (
-    <header className="sticky top-0 z-40 border-b border-brand-border/80 bg-white/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-brand-border bg-white/95 shadow-[0_8px_24px_-20px_rgba(11,31,77,0.35)] backdrop-blur-xl">
       <div className="container-content flex h-16 items-center justify-between gap-6">
-        <Logo />
+        <Logo variant="light" />
 
         <nav aria-label="Điều hướng chính" className="hidden lg:block">
           <ul className="flex items-center gap-0.5">
             {mainNav.map((item) => (
               <li key={item.href ?? item.label}>
                 {item.children ? (
-                  <NavDropdown item={item} onClose={close} />
+                  <NavDropdown item={item} onClose={close} activePath={activePath} />
                 ) : (
                   <a
                     href={item.href ?? '/'}
-                    className="rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-brand-ice hover:text-brand-navy"
+                    aria-current={item.href === activePath ? 'page' : undefined}
+                    className={`rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-brand-ice hover:text-brand-navy ${item.href === activePath ? 'bg-brand-ice text-brand-navy' : 'text-slate-600'}`}
                   >
                     {item.label}
                   </a>
@@ -134,7 +137,7 @@ export const Navbar: React.FC = () => {
             className="absolute inset-x-0 top-0 border-b border-brand-border bg-white px-5 pb-6 pt-3 shadow-2xl"
           >
             <div className="flex items-center justify-between">
-              <Logo />
+              <Logo variant="light" />
               <button
                 type="button"
                 onClick={close}
@@ -170,8 +173,9 @@ export const Navbar: React.FC = () => {
                               <li key={child.href}>
                                 <a
                                   href={child.href}
+                                  aria-current={child.href === activePath ? 'page' : undefined}
                                   onClick={close}
-                                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-brand-ice hover:text-brand-navy"
+                                  className={`block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-brand-ice hover:text-brand-navy ${child.href === activePath ? 'bg-brand-ice text-brand-navy' : 'text-slate-600'}`}
                                 >
                                   {child.label}
                                 </a>
@@ -183,8 +187,9 @@ export const Navbar: React.FC = () => {
                     ) : (
                       <a
                         href={item.href ?? '/'}
+                        aria-current={item.href === activePath ? 'page' : undefined}
                         onClick={close}
-                        className="block rounded-lg px-3 py-3 text-base font-medium text-slate-700 hover:bg-brand-ice"
+                        className={`block rounded-lg px-3 py-3 text-base font-medium hover:bg-brand-ice ${item.href === activePath ? 'bg-brand-ice text-brand-navy' : 'text-slate-700'}`}
                       >
                         {item.label}
                       </a>

@@ -11,7 +11,7 @@ export const Footer: React.FC = () => (
   <footer className="border-t border-brand-border bg-brand-surface text-slate-600">
     <div className="container-content grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
       <div className="space-y-4">
-        <Logo />
+        <Logo variant="light" />
         <p className="max-w-xs text-sm leading-relaxed">
           Ứng dụng Windows điều phối GPT Manager và các AI worker trong một quy trình làm việc.
         </p>

@@ -148,7 +148,7 @@ const PromptModal: React.FC<{
 
         {/* Content */}
         {isAvailable ? (
-          <div className="relative">
+          <div className="premium-code relative">
             <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words px-5 py-4 font-mono text-[13px] leading-relaxed text-slate-300">
               {prompt.content}
             </pre>
@@ -247,7 +247,7 @@ const PromptCard: React.FC<{
 
         {/* Preview snippet */}
         {isAvailable && (
-          <div className="mt-4 rounded-[10px] border border-line bg-navy-900 p-3">
+          <div className="premium-code mt-4 rounded-[10px] border border-line bg-navy-900 p-3">
             <p className="line-clamp-3 font-mono text-[11px] leading-relaxed text-slate-400">
               {prompt.content.slice(0, 200)}...
             </p>
@@ -372,7 +372,7 @@ export const PromptsPage: React.FC = () => {
   ]
 
   return (
-    <div className="bg-navy">
+    <div className="premium-page">
       {/* Hero */}
       <div className="border-b border-white/[0.06] bg-navy-950">
         <div className="container-content py-16 sm:py-20">

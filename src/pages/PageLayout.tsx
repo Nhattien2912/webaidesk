@@ -11,7 +11,7 @@ interface PageLayoutProps {
 }
 
 export const PageLayout: React.FC<PageLayoutProps> = ({ title, intro, needsReview, updated, children }) => (
-  <div className="bg-navy">
+  <div className="premium-page">
     <div className="border-b border-white/[0.06] bg-navy-950">
       <div className="container-content py-14 sm:py-16">
         <a href="/" className="text-sm font-medium text-accent-light hover:underline">

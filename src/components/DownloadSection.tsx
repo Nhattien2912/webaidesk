@@ -26,7 +26,7 @@ const CopyButton: React.FC<{ value: string }> = ({ value }) => {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-xs font-medium text-muted hover:bg-white/5"
+      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
       aria-label="Sao chép mã SHA-256"
     >
       {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -36,20 +36,20 @@ const CopyButton: React.FC<{ value: string }> = ({ value }) => {
 }
 
 const Fact: React.FC<{ label: string; children: React.ReactNode; wide?: boolean }> = ({ label, children, wide }) => (
-  <div className={`rounded-[10px] border border-line bg-navy-900 p-4 ${wide ? 'sm:col-span-2 lg:col-span-4' : ''}`}>
-    <dt className="text-xs text-subtle">{label}</dt>
-    <dd className="mt-1 min-w-0 text-sm font-medium text-ink">{children}</dd>
+  <div className={`rounded-[10px] border border-slate-200 bg-slate-50 p-4 ${wide ? 'sm:col-span-2 lg:col-span-4' : ''}`}>
+    <dt className="text-xs font-medium text-slate-600">{label}</dt>
+    <dd className="mt-1 min-w-0 text-sm font-semibold text-slate-900">{children}</dd>
   </div>
 )
 
 /** Honest risk notice shown with the direct (unsigned, not yet security-reviewed) download. */
 export const DirectDownloadNotice: React.FC<{ release: DirectRelease; className?: string }> = ({ release, className = '' }) => (
-  <div role="note" data-direct-download-notice className={`rounded-[10px] border border-amber-300/30 bg-amber-300/[0.08] p-4 text-sm leading-relaxed text-amber-100 ${className}`}>
-    <p className="flex items-center gap-2 font-semibold text-amber-200">
+  <div role="note" data-direct-download-notice className={`rounded-[10px] border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 ${className}`}>
+    <p className="flex items-center gap-2 font-semibold text-amber-900">
       <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
       Bản {release.versionLabel} chưa ký số
     </p>
-    <p className="mt-1 text-amber-100/90">
+    <p className="mt-1 text-amber-950">
       Bộ cài bên trong chưa có chữ ký số và chưa hoàn tất đánh giá bảo mật. Windows
       SmartScreen hoặc phần mềm diệt virus (đã ghi nhận Kaspersky) có thể cảnh báo. Hãy đối chiếu SHA-256 bên dưới trước
       khi giải nén.
@@ -74,14 +74,14 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
             <Monitor className="h-6 w-6" aria-hidden="true" />
           </span>
           <div>
-            <h3 className="text-xl font-semibold text-white">
+            <h3 className="text-xl font-semibold text-slate-900">
               {manifest && primary
                 ? `AI Desk ${formatReleaseVersion(manifest.version, primary.kind)}`
                 : direct
                   ? `AI Desk ${direct.versionLabel}`
                   : 'AI Desk cho Windows'}
             </h3>
-            <p className="mt-0.5 text-sm text-muted">
+            <p className="mt-0.5 text-sm text-slate-600">
               {direct ? 'Gói tải Windows (RAR)' : primary?.kind === 'archive' ? 'Gói tải Windows (RAR)' : 'Bộ cài Windows (.exe)'}
             </p>
           </div>
@@ -116,13 +116,13 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
       <dl className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Trạng thái phát hành">
           {direct ? (
-            <span className="text-amber-300">{direct.versionLabel} · chưa ký số</span>
+            <span className="text-amber-800">{direct.versionLabel} · chưa ký số</span>
           ) : manifest ? (
-            <span className="text-emerald-300">Đã phát hành · {manifest.channel}</span>
+            <span className="text-emerald-700">Đã phát hành · {manifest.channel}</span>
           ) : loading ? (
             'Đang kiểm tra…'
           ) : (
-            <span className="text-amber-300">Đang chuẩn bị phát hành</span>
+            <span className="text-amber-800">Đang chuẩn bị phát hành</span>
           )}
         </Fact>
         <Fact label="Phiên bản">
@@ -139,7 +139,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
               <span className="break-all">{direct.fileName}</span>
             </Fact>
             <Fact label="Chữ ký số">
-              <span className="inline-flex items-center gap-1.5 text-amber-300">
+              <span className="inline-flex items-center gap-1.5 text-amber-800">
                 <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Chưa xác minh
               </span>
             </Fact>
@@ -156,7 +156,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
               {primary.signature === 'signed' ? (
                 `Đã ký${primary.signer ? ` — ${primary.signer}` : ''}`
               ) : (
-                <span className="inline-flex items-center gap-1.5 text-amber-300">
+                <span className="inline-flex items-center gap-1.5 text-amber-800">
                   <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Chưa ký số
                 </span>
               )}
@@ -175,7 +175,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
         <Fact label="SHA-256" wide>
           {primary || direct ? (
             <div className="flex items-start gap-2">
-              <code className="min-w-0 break-all font-mono text-xs leading-relaxed text-muted">{(primary ?? direct)?.sha256}</code>
+              <code className="min-w-0 break-all font-mono text-xs leading-relaxed text-slate-700">{(primary ?? direct)?.sha256}</code>
               <CopyButton value={(primary ?? direct)?.sha256 ?? ''} />
             </div>
           ) : (

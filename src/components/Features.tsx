@@ -12,13 +12,13 @@ const Tile: React.FC<{
 }> = ({ icon: Icon, title, body, badge, className = '', children }) => (
   <article className={`card flex flex-col overflow-hidden p-6 sm:p-7 ${className}`}>
     <div className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-line bg-navy-900 text-accent-light">
+      <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-200 bg-blue-50 text-blue-700">
         <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
       </span>
-      {badge && <span className="badge bg-amber-400/10 text-amber-300">{badge}</span>}
+      {badge && <span className="badge bg-amber-50 text-amber-800 ring-1 ring-amber-200">{badge}</span>}
     </div>
-    <h3 className="mt-5 text-xl font-semibold text-white">{title}</h3>
-    <p className="mt-2 max-w-lg leading-relaxed text-muted">{body}</p>
+    <h3 className="mt-5 text-xl font-semibold text-slate-900">{title}</h3>
+    <p className="mt-2 max-w-lg leading-relaxed text-slate-700">{body}</p>
     {children && (
       <div className="mt-6 flex-1" aria-hidden="true">
         {children}
@@ -28,31 +28,31 @@ const Tile: React.FC<{
 )
 
 const FlowVisual: React.FC = () => (
-  <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-navy-900 p-4 text-xs">
+  <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-slate-200 bg-slate-50 p-4 text-xs">
     {['GPT Manager', 'AI Desk', 'Codex', 'Kết quả'].map((step, i, all) => (
       <React.Fragment key={step}>
         <span
           className={`rounded-md px-2.5 py-1.5 font-medium ${
-            step === 'AI Desk' ? 'bg-accent/15 text-accent-light ring-1 ring-accent/30' : 'bg-white/[0.04] text-slate-300 ring-1 ring-white/10'
+            step === 'AI Desk' ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300' : 'bg-white text-slate-700 ring-1 ring-slate-300'
           }`}
         >
           {step}
         </span>
-        {i < all.length - 1 && <ArrowRight className="h-3.5 w-3.5 text-subtle" />}
+        {i < all.length - 1 && <ArrowRight className="h-3.5 w-3.5 text-slate-500" />}
       </React.Fragment>
     ))}
   </div>
 )
 
 const PagesVisual: React.FC = () => (
-  <div className="grid grid-cols-3 gap-2 rounded-[10px] border border-line bg-navy-900 p-4">
+  <div className="grid grid-cols-3 gap-2 rounded-[10px] border border-slate-200 bg-slate-50 p-4">
     {['Trang 1', 'Trang 2', 'Trang 3'].map((page, i) => (
-      <div key={page} className={`rounded-md border p-2 ${i === 0 ? 'border-accent/40 bg-accent/[0.06]' : 'border-white/[0.08]'}`}>
-        <div className="mb-2 text-[10px] text-slate-400">{page}</div>
+      <div key={page} className={`rounded-md border bg-white p-2 ${i === 0 ? 'border-blue-400' : 'border-slate-300'}`}>
+        <div className="mb-2 text-[10px] font-medium text-slate-600">{page}</div>
         <div className="space-y-1">
-          <div className="h-1.5 w-11/12 rounded bg-white/10" />
-          <div className="h-1.5 w-8/12 rounded bg-white/10" />
-          <div className="h-1.5 w-10/12 rounded bg-white/10" />
+          <div className="h-1.5 w-11/12 rounded bg-slate-300" />
+          <div className="h-1.5 w-8/12 rounded bg-slate-300" />
+          <div className="h-1.5 w-10/12 rounded bg-slate-300" />
         </div>
       </div>
     ))}
@@ -60,10 +60,10 @@ const PagesVisual: React.FC = () => (
 )
 
 const TimelineVisual: React.FC = () => (
-  <ol className="space-y-1.5 rounded-[10px] border border-line bg-navy-900 p-4 text-xs">
+  <ol className="space-y-1.5 rounded-[10px] border border-slate-200 bg-slate-50 p-4 text-xs">
     {['Nhận yêu cầu', 'Chuyển cho Codex', 'Đã thu kết quả'].map((event, i) => (
-      <li key={event} className="flex items-center gap-2.5 text-slate-300">
-        <span className={`h-1.5 w-1.5 rounded-full ${i === 2 ? 'bg-emerald-300' : 'bg-accent-light'}`} />
+      <li key={event} className="flex items-center gap-2.5 text-slate-700">
+        <span className={`h-2 w-2 rounded-full ${i === 2 ? 'bg-emerald-600' : 'bg-blue-600'}`} />
         {event}
       </li>
     ))}
@@ -71,14 +71,14 @@ const TimelineVisual: React.FC = () => (
 )
 
 const BindingVisual: React.FC = () => (
-  <div className="grid gap-2 rounded-[10px] border border-line bg-navy-900 p-4 text-xs sm:grid-cols-2">
+  <div className="grid gap-2 rounded-[10px] border border-slate-200 bg-slate-50 p-4 text-xs sm:grid-cols-2">
     {[
-      ['Codex', 'Phiên đã gắn: feature-auth', 'Đúng phiên', 'text-emerald-300'],
-      ['Claude', 'Phiên đang mở khác phiên đã gắn', 'Dừng, không gửi', 'text-amber-300'],
+      ['Codex', 'Phiên đã gắn: feature-auth', 'Đúng phiên', 'text-emerald-700'],
+      ['Claude', 'Phiên đang mở khác phiên đã gắn', 'Dừng, không gửi', 'text-amber-800'],
     ].map(([worker, detail, state, tone]) => (
-      <div key={worker} className="rounded-md border border-white/[0.08] p-2.5">
-        <div className="font-medium text-slate-200">{worker}</div>
-        <div className="mt-0.5 text-subtle">{detail}</div>
+      <div key={worker} className="rounded-md border border-slate-300 bg-white p-2.5">
+        <div className="font-semibold text-slate-900">{worker}</div>
+        <div className="mt-0.5 text-slate-600">{detail}</div>
         <div className={`mt-1.5 font-medium ${tone}`}>{state}</div>
       </div>
     ))}

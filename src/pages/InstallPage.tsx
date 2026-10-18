@@ -36,7 +36,7 @@ const useCopy = () => {
 const CodeBlock: React.FC<{ code: string; id: string }> = ({ code, id }) => {
   const { copied, copy } = useCopy()
   return (
-    <div className="relative mt-3 overflow-hidden rounded-[10px] border border-line bg-navy-900">
+    <div className="premium-code relative mt-3 overflow-hidden rounded-[10px] border border-line bg-navy-900">
       <pre className="overflow-x-auto px-4 py-3 pr-12 text-sm text-slate-300">
         <code>{code}</code>
       </pre>
@@ -184,7 +184,7 @@ export const InstallPage: React.FC = () => {
   }
 
   return (
-    <div className="bg-navy">
+    <div className="premium-page">
       {/* Hero */}
       <div className="border-b border-white/[0.06] bg-navy-950">
         <div className="container-content py-14 sm:py-16">
@@ -207,7 +207,7 @@ export const InstallPage: React.FC = () => {
       </div>
 
       <div className="container-content py-12">
-        <div className="relative gap-12 lg:grid lg:grid-cols-[220px_1fr]">
+        <div className="relative gap-12 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
           {/* Sidebar TOC (desktop) */}
           <aside className="hidden lg:block">
             <nav

@@ -47,25 +47,25 @@ export const HowItWorks: React.FC = () => (
         {STEPS.map(({ icon: Icon, title, body, highlight }, index) => (
           <li key={title} className="relative flex lg:pr-6 lg:last:pr-0">
             <div
-              className={`card w-full p-6 ${highlight ? 'border-accent/40 bg-accent/[0.06]' : ''}`}
+              className={`card w-full p-6 ${highlight ? 'border-blue-300 bg-blue-50' : ''}`}
             >
               <div className="flex items-center justify-between">
                 <span
                   className={`flex h-10 w-10 items-center justify-center rounded-[10px] ${
-                    highlight ? 'bg-accent text-white' : 'border border-line bg-navy-900 text-accent-light'
+                    highlight ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-blue-50 text-blue-700'
                   }`}
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <span className="font-mono text-xs text-subtle">0{index + 1}</span>
+                <span className="font-mono text-xs font-medium text-slate-500">0{index + 1}</span>
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-white">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{body}</p>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-700">{body}</p>
             </div>
             {index < STEPS.length - 1 && (
               <ChevronRight
                 aria-hidden="true"
-                className="absolute right-0.5 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-subtle lg:block"
+                className="absolute right-0.5 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-slate-500 lg:block"
               />
             )}
           </li>

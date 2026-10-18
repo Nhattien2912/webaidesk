@@ -17,7 +17,7 @@ export default {
           surface: '#F8FAFC',
           text: '#1F2937',
           muted: '#64748B',
-          border: '#E5E7EB',
+          border: '#E2E8F0',
           success: '#10B981',
         },
         navy: {
@@ -35,10 +35,10 @@ export default {
         paper: '#0E1526',
         line: '#1F2A44',
         accent: {
-          DEFAULT: '#2F7BF5',
-          hover: '#4A8EFA',
-          soft: 'rgba(47, 123, 245, 0.12)',
-          light: '#7DB2FF',
+          DEFAULT: '#2563EB',
+          hover: '#1D4ED8',
+          soft: 'rgba(37, 99, 235, 0.12)',
+          light: '#60A5FA',
         },
       },
       fontFamily: {

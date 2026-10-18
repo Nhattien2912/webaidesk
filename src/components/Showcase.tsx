@@ -53,7 +53,7 @@ export const Showcase: React.FC = () => {
             AI Desk chạy cạnh trình duyệt và công cụ lập trình bạn đang dùng. Mọi bước điều phối đều nhìn thấy được.
           </p>
 
-          <div role="tablist" aria-label="Màn hình minh họa" className="mt-7 inline-flex rounded-[10px] border border-line bg-navy-900 p-1">
+          <div role="tablist" aria-label="Màn hình minh họa" className="mt-7 inline-flex rounded-[10px] border border-slate-300 bg-slate-100 p-1">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -66,7 +66,9 @@ export const Showcase: React.FC = () => {
                 onClick={() => setActive(t.id)}
                 onKeyDown={onKeyDown}
                 className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                  t.id === active ? 'bg-white/10 text-white' : 'text-muted hover:text-white'
+                  t.id === active
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
+                    : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
                 }`}
               >
                 {t.label}
@@ -76,8 +78,8 @@ export const Showcase: React.FC = () => {
 
           <ul className="mt-6 space-y-3.5">
             {tab.points.map((point) => (
-              <li key={point} className="flex gap-3 text-slate-300">
-                <Check className="mt-1 h-4 w-4 shrink-0 text-accent-light" aria-hidden="true" />
+              <li key={point} className="flex gap-3 text-slate-700">
+                <Check className="mt-1 h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
                 <span className="leading-relaxed">{point}</span>
               </li>
             ))}

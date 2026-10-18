@@ -1,5 +1,5 @@
-import React from 'react'
-import { AlertTriangle, Check, Download, ExternalLink, Globe2, Loader2, Monitor, ShieldCheck } from 'lucide-react'
+import React, { useState } from 'react'
+import { AlertTriangle, Check, Copy, Download, ExternalLink, Globe2, Loader2, Monitor, ShieldCheck } from 'lucide-react'
 import { publicAlphaRelease } from '../data/publicAlphaRelease'
 import { siteConfig } from '../config/site'
 import { formatReleaseFileSize, formatReleaseVersion, validateReleaseManifest } from '../lib/releaseManifest'
@@ -31,6 +31,25 @@ const Card: React.FC<{ title: string; children: React.ReactNode; icon?: React.Re
     {children}
   </section>
 )
+
+const ChecksumCopy: React.FC<{ value: string }> = ({ value }) => {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }
+  return (
+    <button type="button" onClick={copy} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1.5 text-[11px] font-semibold text-brand-primary hover:bg-brand-ice" aria-label="Sao chép SHA-256">
+      <Copy className="h-3 w-3" aria-hidden="true" />
+      {copied ? 'Đã sao chép' : 'Sao chép SHA-256'}
+    </button>
+  )
+}
 
 function formatDate(value: string): string {
   const date = new Date(value)
@@ -66,6 +85,7 @@ const DirectDownloadCard: React.FC<{ release: DirectRelease }> = ({ release }) =
       <div>
         <dt className="text-subtle">SHA-256</dt>
         <dd className="mt-1 break-all font-mono text-[11px] leading-relaxed text-ink">{release.sha256}</dd>
+        <ChecksumCopy value={release.sha256} />
       </div>
     </dl>
   </div>
@@ -129,6 +149,7 @@ export const PublicAlphaDownloadCard: React.FC<{ state: DownloadView; fallbackVe
             <div>
               <dt className="text-subtle">SHA-256</dt>
               <dd className="mt-1 break-all font-mono text-[11px] leading-relaxed text-ink">{installer.sha256}</dd>
+              <ChecksumCopy value={installer.sha256} />
             </div>
           </dl>
         </>
@@ -153,7 +174,7 @@ export const DownloadPage: React.FC = () => {
   const download = useDownloadState()
 
   return (
-    <div className="bg-navy">
+    <div className="premium-page">
       <div className="border-b border-white/[0.06] bg-navy-950">
         <div className="container-content py-14 sm:py-20">
           <a href="/" className="text-sm font-medium text-accent-light hover:underline">

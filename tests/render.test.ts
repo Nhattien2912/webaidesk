@@ -2,6 +2,7 @@
 // and checks structure, links, fail-closed download and the waitlist states.
 import { after, before, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { createServer, type ViteDevServer } from 'vite'
 import type { ComponentType } from 'react'
 
@@ -51,8 +52,9 @@ const FORBIDDEN = [
 
 test('home page renders every section in order with the V3 approved headline', async () => {
   const html = await page('/')
-  assert.match(html, /AI Desk điều phối/)
-  assert.match(html, /mọi AI của bạn/)
+  assert.match(html, /AI Desk<\/span> giúp bạn/)
+  assert.match(html, /làm việc thông minh/)
+  assert.match(html, /hơn mỗi ngày/)
   assert.match(html, /Không cần tài khoản AI Desk/)
   const ids = ['capabilities', 'features', 'how-it-works', 'product', 'roadmap', 'download', 'faq', 'community', 'pro-news']
   let last = -1
@@ -70,14 +72,31 @@ test('V3 homepage exposes the truthful hub workflow and verified resource previe
   const html = await page('/')
   assert.match(html, /AI Desk Hub/)
   assert.match(html, /GPT Web Manager/)
-  assert.match(html, /Codex · Claude Code/)
-  assert.match(html, /Assisted workflow/)
-  assert.match(html, /Result to Manager/)
+  assert.match(html, />Codex</)
+  assert.match(html, />Claude Code</)
+  assert.doesNotMatch(html, />Gemini</)
+  assert.doesNotMatch(html, />Perplexity</)
+  assert.match(html, /Result Return/)
+  assert.match(html, /Demo mô phỏng — không kết nối AI thật/)
+  assert.match(html, /Thử demo điều phối/)
+  assert.doesNotMatch(html, /Thử luồng điều phối/)
+  assert.doesNotMatch(html, /Bước tiếp theo/)
   assert.match(html, /Manager Action — mẫu theo source/)
   assert.match(html, /Full Autonomous chưa có/)
   for (const route of ['/install', '/tutorials', '/prompts', '/roadmap', '/why-ai-desk']) {
     assert.ok(html.includes(`href="${route}"`), `V3 preview must link ${route}`)
   }
+})
+
+test('interactive Hero exposes keyboard-operable worker controls and Escape handling', async () => {
+  const html = await page('/')
+  assert.match(html, /aria-pressed="false"/)
+  assert.match(html, /GPT Web Manager — Điều phối kế hoạch/)
+  assert.match(html, /Codex — Coding Worker/)
+  assert.match(html, /Claude Code — AI Worker/)
+  const source = await readFile('src/components/hero/HeroVisual.tsx', 'utf8')
+  assert.match(source, /event\.key === 'Escape'/)
+  assert.match(source, /setSelected\(null\)/)
 })
 
 test('every in-page anchor points at an element that exists', async () => {
@@ -459,15 +478,14 @@ test('social links use the local YouTube and Facebook brand icons (decorative, b
   }
 })
 
-test('Navbar and Footer show the official AI Desk lockup image with an accessible home link', async () => {
+test('Navbar and light Footer use the official mark with a navy wordmark', async () => {
   const html = await page('/')
-  const logos = [...html.matchAll(/<a href="\/" class="inline-flex items-center" aria-label="AI Desk — trang chủ"><img [^>]*>/g)].map((m) => m[0])
-  assert.equal(logos.length, 2, 'Navbar + Footer')
-  for (const l of logos) {
-    assert.match(l, /src="[^"]*aidesk-lockup[^"]*\.png"/)
-    assert.match(l, /alt=""/)
-    assert.match(l, /height="28"/)
-  }
+  const homeLogos = [...html.matchAll(/<a href="\/" class="inline-flex items-center" aria-label="AI Desk — trang chủ">[\s\S]*?<\/a>/g)].map((m) => m[0])
+  assert.equal(homeLogos.length, 2, 'Navbar + Footer')
+  assert.match(homeLogos[0], /src="[^"]*aidesk-mark[^"]*\.png"/)
+  assert.match(homeLogos[0], /text-brand-navy">AI Desk<\/span>/)
+  assert.match(homeLogos[1], /src="[^"]*aidesk-mark[^"]*\.png"/)
+  assert.match(homeLogos[1], /text-brand-navy">AI Desk<\/span>/)
   const preview = render(h(await component('/src/components/AppPreview.tsx', 'AppPreview'), { screen: 'desk' }))
   assert.match(preview, /src="[^"]*aidesk-mark[^"]*\.png"/)
 })
@@ -534,6 +552,7 @@ test('direct R2 state: one primary button, 0.2 Beta facts and the unsigned/antiv
     assert.match(html, />RAR</)
     assert.match(html, /chưa ký số/)
     assert.match(html, /Kaspersky/)
+    assert.match(html, /aria-label="Sao chép(?: mã)? SHA-256"/)
     assert.ok(!/Alpha RC1|alpha-rc1|Đã phát hành/.test(html), 'labelled 0.2 Beta only, never as a signed release')
   }
 })

@@ -254,7 +254,7 @@ export const AppPreview: React.FC<{ screen?: PreviewScreen; className?: string; 
       <div
         role="img"
         aria-label={`Minh họa giao diện AI Desk trên Windows — ${LABELS[screen]}. Dữ liệu là ví dụ.`}
-        className="overflow-hidden rounded-[10px] border border-white/10 bg-navy-900 shadow-2xl shadow-black/50"
+        className="app-preview-dark overflow-hidden rounded-xl border border-slate-700 bg-navy-900 shadow-2xl shadow-slate-950/35"
       >
         <div aria-hidden="true" className="select-none">
           {/* Windows title bar */}

@@ -155,7 +155,7 @@ export const RoadmapPage: React.FC = () => {
   ]
 
   return (
-    <div className="bg-navy">
+    <div className="premium-page">
       {/* Hero */}
       <div className="border-b border-white/[0.06] bg-navy-950">
         <div className="container-content py-16 sm:py-20">
