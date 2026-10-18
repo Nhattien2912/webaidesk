@@ -3,7 +3,8 @@
 
 export interface NavItem {
   label: string
-  href: string
+  href?: string
+  children?: NavItem[]
 }
 
 export const SECTION_IDS = {
@@ -20,16 +21,29 @@ export const SECTION_IDS = {
 
 export const mainNav: NavItem[] = [
   { label: 'Tính năng', href: `/#${SECTION_IDS.features}` },
-  { label: 'Cách hoạt động', href: `/#${SECTION_IDS.howItWorks}` },
-  { label: 'Sản phẩm', href: `/#${SECTION_IDS.showcase}` },
+  { label: 'Vì sao AI Desk?', href: '/why-ai-desk' },
+  {
+    label: 'Hướng dẫn',
+    children: [
+      { label: 'Hướng dẫn cài đặt', href: '/install' },
+      { label: 'Video hướng dẫn', href: '/tutorials' },
+      { label: 'Thư viện Prompt', href: '/prompts' },
+    ],
+  },
+  { label: 'Lộ trình', href: '/roadmap' },
   { label: 'Tải về', href: '/download' },
-  { label: 'Roadmap', href: `/#${SECTION_IDS.roadmap}` },
-  { label: 'FAQ', href: `/#${SECTION_IDS.faq}` },
-  { label: 'Cộng đồng', href: `/#${SECTION_IDS.community}` },
 ]
 
 export const legalNav: NavItem[] = [
   { label: 'Quyền riêng tư', href: '/privacy' },
   { label: 'Điều khoản', href: '/terms' },
   { label: 'Changelog', href: '/changelog' },
+]
+
+export const resourcesNav: NavItem[] = [
+  { label: 'Vì sao AI Desk?', href: '/why-ai-desk' },
+  { label: 'Hướng dẫn cài đặt', href: '/install' },
+  { label: 'Video hướng dẫn', href: '/tutorials' },
+  { label: 'Thư viện Prompt', href: '/prompts' },
+  { label: 'Lộ trình', href: '/roadmap' },
 ]

@@ -1,6 +1,17 @@
 // Minimal path routing for a static host (Cloudflare Pages serves index.html for unknown paths).
 
-export type RouteId = 'home' | 'download' | 'privacy' | 'terms' | 'changelog' | 'not-found'
+export type RouteId =
+  | 'home'
+  | 'download'
+  | 'privacy'
+  | 'terms'
+  | 'changelog'
+  | 'why-ai-desk'
+  | 'tutorials'
+  | 'install'
+  | 'roadmap'
+  | 'prompts'
+  | 'not-found'
 
 const ROUTES: Record<string, RouteId> = {
   '/': 'home',
@@ -9,6 +20,11 @@ const ROUTES: Record<string, RouteId> = {
   '/privacy': 'privacy',
   '/terms': 'terms',
   '/changelog': 'changelog',
+  '/why-ai-desk': 'why-ai-desk',
+  '/tutorials': 'tutorials',
+  '/install': 'install',
+  '/roadmap': 'roadmap',
+  '/prompts': 'prompts',
 }
 
 export const ROUTE_TITLES: Record<RouteId, string> = {
@@ -17,6 +33,11 @@ export const ROUTE_TITLES: Record<RouteId, string> = {
   privacy: 'Chính sách quyền riêng tư — AI Desk',
   terms: 'Điều khoản sử dụng — AI Desk',
   changelog: 'Changelog — AI Desk',
+  'why-ai-desk': 'Vì sao tôi xây dựng AI Desk? — AI Desk',
+  tutorials: 'Video hướng dẫn — AI Desk',
+  install: 'Hướng dẫn cài đặt — AI Desk',
+  roadmap: 'Lộ trình phát triển — AI Desk',
+  prompts: 'Thư viện Prompt — AI Desk',
   'not-found': 'Không tìm thấy trang — AI Desk',
 }
 

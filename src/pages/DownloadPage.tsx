@@ -171,8 +171,8 @@ export const DownloadPage: React.FC = () => {
                   : `AI Desk Public Alpha v${release.version}`}
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-                Một bản Alpha có kiểm soát dành cho luồng Manual và Assisted. Bản tải chỉ mở sau khi bộ cài được ký,
-                kiểm tra hash và phê duyệt phát hành rõ ràng.
+                Một bản Beta có kiểm soát dành cho luồng Manual và Assisted. Gói RAR hiện tại chưa ký số;
+                hãy đối chiếu SHA-256 và đọc cảnh báo bảo mật trước khi mở tệp.
               </p>
             </div>
 

@@ -21,7 +21,7 @@ export const Hero: React.FC<{ download: DownloadView }> = ({ download }) => {
       <div className="container-content relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:py-24">
         <div>
           <p className="badge bg-white/[0.06] text-slate-300 ring-1 ring-white/10">
-            Ứng dụng Windows · Đang chuẩn bị Free Public Beta
+            Ứng dụng Windows · 0.2 Beta hiện có dưới dạng RAR chưa ký số
           </p>
           <h1 id="hero-title" className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[2.6rem] xl:text-[2.9rem]">
             Một bàn làm việc.

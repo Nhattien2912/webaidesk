@@ -70,8 +70,25 @@ test('every in-page anchor points at an element that exists', async () => {
   const html = await page('/')
   const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]))
   const anchors = [...html.matchAll(/href="\/?#([^"]+)"/g)].map((m) => m[1])
-  assert.ok(anchors.length > 10)
+  const expected = ['main', 'features', 'download', 'pro-news']
+  for (const anchor of expected) assert.ok(anchors.includes(anchor), `missing homepage link #${anchor}`)
   for (const anchor of anchors) assert.ok(ids.has(anchor), `broken anchor #${anchor}`)
+})
+
+test('new routes render and navigation contains no fake hash links', async () => {
+  const expected: Array<[string, RegExp]> = [
+    ['/why-ai-desk', /Vì sao tôi xây dựng AI Desk/],
+    ['/tutorials', /Video hướng dẫn AI Desk/],
+    ['/install', /Hướng dẫn cài đặt AI Desk/],
+    ['/roadmap', /Lộ trình phát triển AI Desk/],
+    ['/prompts', /Thư viện Prompt AI Desk/],
+  ]
+  for (const [path, heading] of expected) {
+    const html = await page(path)
+    assert.match(html, heading)
+    assert.equal((html.match(/<h1\b/g) ?? []).length, 1, `${path}: exactly one h1`)
+    assert.ok(!html.includes('href="#"'), `${path}: fake hash link`)
+  }
 })
 
 test('internal page links resolve to known routes', async () => {

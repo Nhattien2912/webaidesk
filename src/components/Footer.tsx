@@ -2,7 +2,7 @@ import React from 'react'
 import { Mail } from 'lucide-react'
 import { Logo } from './Logo'
 import { SocialList } from './SocialLinks'
-import { legalNav, mainNav } from '../config/navigation'
+import { legalNav, mainNav, resourcesNav } from '../config/navigation'
 import { siteConfig } from '../config/site'
 
 const BUILD_YEAR = new Date().getFullYear()
@@ -24,20 +24,22 @@ export const Footer: React.FC = () => (
       <nav aria-label="Sản phẩm">
         <h2 className="text-sm font-semibold text-white">Sản phẩm</h2>
         <ul className="mt-4 space-y-2.5 text-sm">
-          {mainNav.map((item) => (
-            <li key={item.href}>
-              <a href={item.href} className="hover:text-white">
-                {item.label}
-              </a>
-            </li>
-          ))}
+          {mainNav
+            .filter((item): item is typeof item & { href: string } => !item.children && Boolean(item.href))
+            .map((item) => (
+              <li key={item.href}>
+                <a href={item.href} className="hover:text-white">
+                  {item.label}
+                </a>
+              </li>
+            ))}
         </ul>
       </nav>
 
-      <nav aria-label="Pháp lý và cập nhật">
-        <h2 className="text-sm font-semibold text-white">Thông tin</h2>
+      <nav aria-label="Tài nguyên">
+        <h2 className="text-sm font-semibold text-white">Tài nguyên</h2>
         <ul className="mt-4 space-y-2.5 text-sm">
-          {legalNav.map((item) => (
+          {resourcesNav.map((item) => (
             <li key={item.href}>
               <a href={item.href} className="hover:text-white">
                 {item.label}
@@ -48,8 +50,17 @@ export const Footer: React.FC = () => (
       </nav>
 
       <div>
-        <h2 className="text-sm font-semibold text-white">Liên hệ</h2>
-        <div className="mt-4 space-y-3 text-sm">
+        <h2 className="text-sm font-semibold text-white">Thông tin</h2>
+        <ul className="mt-4 space-y-2.5 text-sm">
+          {legalNav.map((item) => (
+            <li key={item.href}>
+              <a href={item.href} className="hover:text-white">
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-6 space-y-3 text-sm">
           {siteConfig.contactEmail ? (
             <a href={`mailto:${siteConfig.contactEmail}`} className="flex items-center gap-2 hover:text-white">
               <Mail className="h-4 w-4" aria-hidden="true" />
