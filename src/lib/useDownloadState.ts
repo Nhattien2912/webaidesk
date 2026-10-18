@@ -1,22 +1,6 @@
-import { useEffect, useState } from 'react'
-import { siteConfig } from '../config/site'
-import { loadDownloadState, type DownloadState } from './releaseManifest'
+import { DIRECT_DOWNLOAD, type DownloadView } from './directDownload'
 
-export function useDownloadState(): DownloadState {
-  const [state, setState] = useState<DownloadState>({ kind: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    loadDownloadState(siteConfig.release.manifestUrl, {
-      allowedHosts: siteConfig.release.allowedHosts,
-      allowUnsigned: siteConfig.release.allowUnsigned,
-    }).then((next) => {
-      if (!cancelled) setState(next)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return state
+/** The primary button links straight to the public R2 file (see directDownload.ts). */
+export function useDownloadState(): DownloadView {
+  return { kind: 'direct', release: DIRECT_DOWNLOAD }
 }

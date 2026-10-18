@@ -90,26 +90,27 @@ test('no outdated or unverified claims and no login, license or payment UI', asy
   }
 })
 
-test('download is closed (fail-closed) before a manifest is loaded, with no fake values', async () => {
+const R2_URL = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/BoCaiDatAIDesk%200.2Beta.rar'
+const R2_SHA256 = 'f482fc4510ae80dbabe09a9665f012b110fbb6cf0d1e18a4e4ccd8153f8681b1'
+
+test('home download section links the primary button straight to the public R2 RAR', async () => {
   const html = await page('/')
-  assert.match(html, /data-download-state="loading"/)
-  assert.ok(!/\.exe"/.test(html), 'no installer link may be rendered without a manifest')
-  assert.ok(!/[a-f0-9]{64}/.test(html), 'no checksum may be rendered without a manifest')
+  assert.match(html, /data-download-state="direct"/)
+  assert.equal(html.split(`href="${R2_URL}"`).length - 1, 1, 'exactly one link to the R2 file: the primary button')
+  assert.ok(html.includes(R2_SHA256))
+  assert.ok(!/href="[^"]*\.exe/.test(html), 'no EXE link')
 })
 
-test('Public Alpha download page is responsive content with a hard-closed release gate', async () => {
+test('Public Alpha download page offers the direct 0.2 Beta download with its risk notice', async () => {
   const html = await page('/download')
-  assert.match(html, /AI Desk Public Alpha v0\.2\.0/)
+  assert.match(html, /AI Desk 0\.2 Beta/)
   assert.match(html, /Windows x64/)
-  assert.match(html, /Coming Soon/)
-  assert.match(html, /data-release-gate="closed"/)
-  assert.match(html, /data-manifest-state="loading"/)
-  assert.match(html, /<button[^>]*disabled/)
+  assert.match(html, /data-release-gate="direct"/)
+  assert.equal(html.split(`href="${R2_URL}"`).length - 1, 1)
   assert.match(html, /Manual và Assisted/)
   assert.match(html, /Chrome \/ Brave và GPT Bridge/)
   assert.match(html, /Full Autonomous/)
-  assert.ok(!/href="[^"]*\.exe/.test(html), 'closed page must not expose an installer URL')
-  assert.ok(!/[a-f0-9]{64}/i.test(html), 'closed page must not publish an artifact checksum')
+  assert.ok(!/href="[^"]*\.exe/.test(html), 'no EXE link')
 })
 
 test('Public Alpha card opens only for a validated signed manifest and renders its exact metadata', async () => {
@@ -483,4 +484,25 @@ test('waitlist form with Turnstile: submit locked until solved, retry on failure
   const expired = render(h(WaitlistForm, { turnstileSiteKey: 'k', initialCaptcha: { status: 'expired' } }))
   assert.match(expired, /đã hết hạn/)
   assert.match(submitTag(expired), /disabled/)
+})
+
+test('direct R2 state: one primary button, 0.2 Beta facts and the unsigned/antivirus notice', async () => {
+  const DownloadCard = await component<{ state: unknown }>('/src/components/DownloadSection.tsx', 'DownloadCard')
+  const PublicAlphaDownloadCard = await component<{ state: unknown; fallbackVersion: string }>('/src/pages/DownloadPage.tsx', 'PublicAlphaDownloadCard')
+  const { DIRECT_DOWNLOAD } = (await vite.ssrLoadModule('/src/lib/directDownload.ts')) as { DIRECT_DOWNLOAD: Record<string, unknown> }
+  assert.equal(DIRECT_DOWNLOAD.url, R2_URL)
+  assert.equal(DIRECT_DOWNLOAD.sha256, R2_SHA256)
+  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 120193516)
+  const state = { kind: 'direct', release: DIRECT_DOWNLOAD }
+  for (const html of [render(h(DownloadCard, { state })), render(h(PublicAlphaDownloadCard, { state, fallbackVersion: '0.2.0' }))]) {
+    assert.equal(html.match(/<a [^>]*href=/g)?.length, 1, 'exactly one link: the primary button')
+    assert.ok(html.includes(`<a href="${R2_URL}"`))
+    assert.match(html, /Tải AI Desk cho Windows/)
+    assert.match(html, /0\.2 Beta/)
+    assert.match(html, /120\.19 MB/)
+    assert.match(html, />RAR</)
+    assert.match(html, /chưa ký số/)
+    assert.match(html, /Kaspersky/)
+    assert.ok(!/Alpha RC1|alpha-rc1|Đã phát hành/.test(html), 'labelled 0.2 Beta only, never as a signed release')
+  }
 })

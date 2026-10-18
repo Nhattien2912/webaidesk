@@ -2,8 +2,10 @@ import React from 'react'
 import { AlertTriangle, Check, Download, ExternalLink, Globe2, Loader2, Monitor, ShieldCheck } from 'lucide-react'
 import { publicAlphaRelease } from '../data/publicAlphaRelease'
 import { siteConfig } from '../config/site'
-import { formatReleaseFileSize, formatReleaseVersion, validateReleaseManifest, type DownloadState } from '../lib/releaseManifest'
+import { formatReleaseFileSize, formatReleaseVersion, validateReleaseManifest } from '../lib/releaseManifest'
 import { useDownloadState } from '../lib/useDownloadState'
+import type { DownloadView, DirectRelease } from '../lib/directDownload'
+import { DirectDownloadNotice } from '../components/DownloadSection'
 
 const List: React.FC<{ items: readonly string[]; tone?: 'positive' | 'warning' }> = ({ items, tone = 'positive' }) => (
   <ul className="mt-5 space-y-3">
@@ -35,8 +37,43 @@ function formatDate(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
 }
 
+/** Direct R2 download card: same single primary button, with the unsigned/AV risk notice. */
+const DirectDownloadCard: React.FC<{ release: DirectRelease }> = ({ release }) => (
+  <div className="card border-amber-300/20 p-6 text-center sm:p-7" data-release-gate="direct" data-manifest-state="direct">
+    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
+      <Download className="h-7 w-7" aria-hidden="true" />
+    </span>
+    <p className="mt-4 text-sm font-medium text-amber-200">{release.versionLabel} · chưa ký số</p>
+    <p className="mt-1 text-sm text-muted">Windows x64 · {release.versionLabel}</p>
+    <a href={release.url} className="btn-primary mt-5 w-full" rel="noopener" data-direct-download="true">
+      <Download className="h-4 w-4" aria-hidden="true" />
+      Tải AI Desk cho Windows
+    </a>
+    <DirectDownloadNotice release={release} className="mt-4 text-left text-xs" />
+    <dl className="mt-5 space-y-2 border-t border-line pt-4 text-left text-xs">
+      <div className="flex justify-between gap-3">
+        <dt className="text-subtle">Phiên bản</dt>
+        <dd className="text-ink">{release.versionLabel}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-subtle">Dung lượng</dt>
+        <dd className="text-ink">{formatReleaseFileSize({ kind: 'archive', sizeBytes: release.sizeBytes })}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-subtle">Định dạng</dt>
+        <dd className="text-ink">RAR</dd>
+      </div>
+      <div>
+        <dt className="text-subtle">SHA-256</dt>
+        <dd className="mt-1 break-all font-mono text-[11px] leading-relaxed text-ink">{release.sha256}</dd>
+      </div>
+    </dl>
+  </div>
+)
+
 /** The only opening path is a DownloadState that already passed validateReleaseManifest. */
-export const PublicAlphaDownloadCard: React.FC<{ state: DownloadState; fallbackVersion: string }> = ({ state, fallbackVersion }) => {
+export const PublicAlphaDownloadCard: React.FC<{ state: DownloadView; fallbackVersion: string }> = ({ state, fallbackVersion }) => {
+  if (state.kind === 'direct') return <DirectDownloadCard release={state.release} />
   const checked =
     state.kind === 'available'
       ? validateReleaseManifest(state.manifest, { allowedHosts: siteConfig.release.allowedHosts, allowUnsigned: false })
@@ -129,7 +166,9 @@ export const DownloadPage: React.FC = () => {
                 <span className="badge bg-white/[0.05] text-muted ring-1 ring-line">{release.platform}</span>
               </div>
               <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                AI Desk Public Alpha v{release.version}
+                {download.kind === 'direct'
+                  ? `AI Desk ${download.release.versionLabel}`
+                  : `AI Desk Public Alpha v${release.version}`}
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
                 Một bản Alpha có kiểm soát dành cho luồng Manual và Assisted. Bản tải chỉ mở sau khi bộ cài được ký,

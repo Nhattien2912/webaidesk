@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { AlertTriangle, Check, Copy, Download, Loader2, Monitor } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import { formatReleaseFileSize, formatReleaseVersion, type DownloadState } from '../lib/releaseManifest'
+import { formatReleaseFileSize, formatReleaseVersion } from '../lib/releaseManifest'
+import type { DownloadView, DirectRelease } from '../lib/directDownload'
 
 const REQUIREMENTS = ['Windows 10 hoặc 11, 64-bit', 'ChatGPT web cho GPT Manager', 'Codex hoặc Claude Code làm worker']
 
@@ -41,12 +42,29 @@ const Fact: React.FC<{ label: string; children: React.ReactNode; wide?: boolean 
   </div>
 )
 
+/** Honest risk notice shown with the direct (unsigned, not yet security-reviewed) download. */
+export const DirectDownloadNotice: React.FC<{ release: DirectRelease; className?: string }> = ({ release, className = '' }) => (
+  <div role="note" data-direct-download-notice className={`rounded-[10px] border border-amber-300/30 bg-amber-300/[0.08] p-4 text-sm leading-relaxed text-amber-100 ${className}`}>
+    <p className="flex items-center gap-2 font-semibold text-amber-200">
+      <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+      Bản {release.versionLabel} chưa ký số
+    </p>
+    <p className="mt-1 text-amber-100/90">
+      Bộ cài bên trong chưa có chữ ký số và chưa hoàn tất đánh giá bảo mật. Windows
+      SmartScreen hoặc phần mềm diệt virus (đã ghi nhận Kaspersky) có thể cảnh báo. Hãy đối chiếu SHA-256 bên dưới trước
+      khi giải nén.
+    </p>
+  </div>
+)
+
 /** Renders exactly what the validated manifest says, or a closed state with no fabricated values. */
-export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
+export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
   const available = state.kind === 'available'
   const loading = state.kind === 'loading'
   const primary = available ? state.primary : null
   const manifest = available ? state.manifest : null
+  const direct = state.kind === 'direct' ? state.release : null
+  const href = primary?.url ?? direct?.url ?? null
 
   return (
     <div className="card p-6 sm:p-8" data-download-state={state.kind} aria-busy={loading}>
@@ -57,15 +75,21 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
           </span>
           <div>
             <h3 className="text-xl font-semibold text-white">
-              {manifest && primary ? `AI Desk ${formatReleaseVersion(manifest.version, primary.kind)}` : 'AI Desk cho Windows'}
+              {manifest && primary
+                ? `AI Desk ${formatReleaseVersion(manifest.version, primary.kind)}`
+                : direct
+                  ? `AI Desk ${direct.versionLabel}`
+                  : 'AI Desk cho Windows'}
             </h3>
-            <p className="mt-0.5 text-sm text-muted">{primary?.kind === 'archive' ? 'Gói tải Windows (RAR)' : 'Bộ cài Windows (.exe)'}</p>
+            <p className="mt-0.5 text-sm text-muted">
+              {direct ? 'Gói tải Windows (RAR)' : primary?.kind === 'archive' ? 'Gói tải Windows (RAR)' : 'Bộ cài Windows (.exe)'}
+            </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-2 lg:items-end">
-          {primary ? (
-            <a href={primary.url} className="btn-primary px-7" rel="noopener">
+          {href ? (
+            <a href={href} className="btn-primary px-7" rel="noopener" {...(direct ? { 'data-direct-download': 'true' } : {})}>
               <Download className="h-4 w-4" aria-hidden="true" />
               Tải AI Desk cho Windows
             </a>
@@ -79,7 +103,7 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
               {loading ? 'Đang kiểm tra bản phát hành…' : 'Đang chuẩn bị phát hành'}
             </button>
           )}
-          {!available && (
+          {!available && !direct && (
             <a href={`#${SECTION_IDS.waitlist}`} className="text-sm text-accent-light hover:underline">
               Nhận thông báo khi mở tải
             </a>
@@ -87,9 +111,13 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
         </div>
       </div>
 
+      {direct && <DirectDownloadNotice release={direct} className="mt-6" />}
+
       <dl className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Trạng thái phát hành">
-          {manifest ? (
+          {direct ? (
+            <span className="text-amber-300">{direct.versionLabel} · chưa ký số</span>
+          ) : manifest ? (
             <span className="text-emerald-300">Đã phát hành · {manifest.channel}</span>
           ) : loading ? (
             'Đang kiểm tra…'
@@ -97,9 +125,26 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
             <span className="text-amber-300">Đang chuẩn bị phát hành</span>
           )}
         </Fact>
-        <Fact label="Phiên bản">{manifest && primary ? formatReleaseVersion(manifest.version, primary.kind) : '—'}</Fact>
-        <Fact label="Dung lượng">{primary ? formatReleaseFileSize(primary) : '—'}</Fact>
+        <Fact label="Phiên bản">
+          {manifest && primary ? formatReleaseVersion(manifest.version, primary.kind) : direct ? direct.versionLabel : '—'}
+        </Fact>
+        <Fact label="Dung lượng">
+          {primary ? formatReleaseFileSize(primary) : direct ? formatReleaseFileSize({ kind: 'archive', sizeBytes: direct.sizeBytes }) : '—'}
+        </Fact>
         <Fact label="Hệ điều hành">{manifest ? manifest.minOs : 'Windows 10/11, 64-bit'}</Fact>
+        {direct && (
+          <>
+            <Fact label="Định dạng">RAR</Fact>
+            <Fact label="Tệp">
+              <span className="break-all">{direct.fileName}</span>
+            </Fact>
+            <Fact label="Chữ ký số">
+              <span className="inline-flex items-center gap-1.5 text-amber-300">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Chưa xác minh
+              </span>
+            </Fact>
+          </>
+        )}
         {manifest && primary && (
           <>
             <Fact label="Ngày phát hành">{formatDate(manifest.releasedAt)}</Fact>
@@ -128,10 +173,10 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
           </>
         )}
         <Fact label="SHA-256" wide>
-          {primary ? (
+          {primary || direct ? (
             <div className="flex items-start gap-2">
-              <code className="min-w-0 break-all font-mono text-xs leading-relaxed text-muted">{primary.sha256}</code>
-              <CopyButton value={primary.sha256} />
+              <code className="min-w-0 break-all font-mono text-xs leading-relaxed text-muted">{(primary ?? direct)?.sha256}</code>
+              <CopyButton value={(primary ?? direct)?.sha256 ?? ''} />
             </div>
           ) : (
             <span className="text-muted">Sẽ được công bố cùng bản phát hành đã duyệt.</span>
@@ -142,7 +187,7 @@ export const DownloadCard: React.FC<{ state: DownloadState }> = ({ state }) => {
   )
 }
 
-export const DownloadSection: React.FC<{ state: DownloadState }> = ({ state }) => (
+export const DownloadSection: React.FC<{ state: DownloadView }> = ({ state }) => (
   <section id={SECTION_IDS.download} aria-labelledby="download-title" className="section border-y border-white/[0.06] bg-navy-900">
     <div className="container-content">
       <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">

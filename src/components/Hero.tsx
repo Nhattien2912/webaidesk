@@ -5,9 +5,9 @@ import { VideoDialog } from './VideoDialog'
 import { SECTION_IDS } from '../config/navigation'
 import { siteConfig } from '../config/site'
 import { toYouTubeEmbedUrl } from '../lib/video'
-import type { DownloadState } from '../lib/releaseManifest'
+import type { DownloadView } from '../lib/directDownload'
 
-export const Hero: React.FC<{ download: DownloadState }> = ({ download }) => {
+export const Hero: React.FC<{ download: DownloadView }> = ({ download }) => {
   const [videoOpen, setVideoOpen] = useState(false)
   const embedUrl = toYouTubeEmbedUrl(siteConfig.introVideoUrl)
   const available = download.kind === 'available'
