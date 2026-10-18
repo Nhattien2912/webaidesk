@@ -173,6 +173,9 @@ export const DownloadSection: React.FC<{ state: DownloadState }> = ({ state }) =
           Get-FileHash .\tên-tệp.exe
         </code>
       </p>
+      <a href="/download" className="mt-5 inline-flex text-sm font-medium text-accent-light hover:underline">
+        Xem phạm vi, yêu cầu và hướng dẫn Public Alpha →
+      </a>
     </div>
   </section>
 )

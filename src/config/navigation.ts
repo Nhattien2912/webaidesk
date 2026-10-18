@@ -22,7 +22,7 @@ export const mainNav: NavItem[] = [
   { label: 'Tính năng', href: `/#${SECTION_IDS.features}` },
   { label: 'Cách hoạt động', href: `/#${SECTION_IDS.howItWorks}` },
   { label: 'Sản phẩm', href: `/#${SECTION_IDS.showcase}` },
-  { label: 'Tải về', href: `/#${SECTION_IDS.download}` },
+  { label: 'Tải về', href: '/download' },
   { label: 'Roadmap', href: `/#${SECTION_IDS.roadmap}` },
   { label: 'FAQ', href: `/#${SECTION_IDS.faq}` },
   { label: 'Cộng đồng', href: `/#${SECTION_IDS.community}` },

@@ -13,6 +13,7 @@ import { Footer } from './components/Footer'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { ChangelogPage } from './pages/ChangelogPage'
+import { DownloadPage } from './pages/DownloadPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ROUTE_TITLES, resolveRoute, type RouteId } from './lib/routes'
 import { useDownloadState } from './lib/useDownloadState'
@@ -37,6 +38,7 @@ const HomePage: React.FC = () => {
 
 const PAGES: Record<RouteId, React.FC> = {
   home: HomePage,
+  download: DownloadPage,
   privacy: PrivacyPage,
   terms: TermsPage,
   changelog: ChangelogPage,

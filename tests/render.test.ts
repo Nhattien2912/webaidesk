@@ -78,7 +78,7 @@ test('internal page links resolve to known routes', async () => {
   const html = await page('/')
   const { resolveRoute } = (await vite.ssrLoadModule('/src/lib/routes.ts')) as { resolveRoute: (p: string) => string }
   const paths = [...html.matchAll(/href="(\/[a-z-]*)"/g)].map((m) => m[1])
-  for (const p of ['/privacy', '/terms', '/changelog']) assert.ok(paths.includes(p), `footer must link ${p}`)
+  for (const p of ['/download', '/privacy', '/terms', '/changelog']) assert.ok(paths.includes(p), `site must link ${p}`)
   for (const p of paths) assert.notEqual(resolveRoute(p), 'not-found', `dead link ${p}`)
 })
 
@@ -95,6 +95,20 @@ test('download is closed (fail-closed) before a manifest is loaded, with no fake
   assert.match(html, /data-download-state="loading"/)
   assert.ok(!/\.exe"/.test(html), 'no installer link may be rendered without a manifest')
   assert.ok(!/[a-f0-9]{64}/.test(html), 'no checksum may be rendered without a manifest')
+})
+
+test('Public Alpha download page is responsive content with a hard-closed release gate', async () => {
+  const html = await page('/download')
+  assert.match(html, /AI Desk Public Alpha v0\.2\.0/)
+  assert.match(html, /Windows x64/)
+  assert.match(html, /Coming Soon/)
+  assert.match(html, /data-release-gate="closed"/)
+  assert.match(html, /<button[^>]*disabled/)
+  assert.match(html, /Manual và Assisted/)
+  assert.match(html, /Chrome \/ Brave và GPT Bridge/)
+  assert.match(html, /Full Autonomous/)
+  assert.ok(!/href="[^"]*\.exe/.test(html), 'closed page must not expose an installer URL')
+  assert.ok(!/[a-f0-9]{64}/i.test(html), 'closed page must not publish an artifact checksum')
 })
 
 test('DownloadCard: unavailable state disables the CTA; available state shows manifest values only', async () => {
