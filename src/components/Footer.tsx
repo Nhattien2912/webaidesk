@@ -8,7 +8,7 @@ import { siteConfig } from '../config/site'
 const BUILD_YEAR = new Date().getFullYear()
 
 export const Footer: React.FC = () => (
-  <footer className="border-t border-white/[0.06] bg-navy-950 text-slate-400">
+  <footer className="border-t border-brand-border bg-brand-surface text-slate-600">
     <div className="container-content grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
       <div className="space-y-4">
         <Logo />
@@ -22,13 +22,13 @@ export const Footer: React.FC = () => (
       </div>
 
       <nav aria-label="Sản phẩm">
-        <h2 className="text-sm font-semibold text-white">Sản phẩm</h2>
+        <h2 className="text-sm font-semibold text-brand-navy">Sản phẩm</h2>
         <ul className="mt-4 space-y-2.5 text-sm">
           {mainNav
             .filter((item): item is typeof item & { href: string } => !item.children && Boolean(item.href))
             .map((item) => (
               <li key={item.href}>
-                <a href={item.href} className="hover:text-white">
+                <a href={item.href} className="hover:text-brand-primary">
                   {item.label}
                 </a>
               </li>
@@ -37,11 +37,11 @@ export const Footer: React.FC = () => (
       </nav>
 
       <nav aria-label="Tài nguyên">
-        <h2 className="text-sm font-semibold text-white">Tài nguyên</h2>
+        <h2 className="text-sm font-semibold text-brand-navy">Tài nguyên</h2>
         <ul className="mt-4 space-y-2.5 text-sm">
           {resourcesNav.map((item) => (
             <li key={item.href}>
-              <a href={item.href} className="hover:text-white">
+              <a href={item.href} className="hover:text-brand-primary">
                 {item.label}
               </a>
             </li>
@@ -50,11 +50,11 @@ export const Footer: React.FC = () => (
       </nav>
 
       <div>
-        <h2 className="text-sm font-semibold text-white">Thông tin</h2>
+        <h2 className="text-sm font-semibold text-brand-navy">Thông tin</h2>
         <ul className="mt-4 space-y-2.5 text-sm">
           {legalNav.map((item) => (
             <li key={item.href}>
-              <a href={item.href} className="hover:text-white">
+              <a href={item.href} className="hover:text-brand-primary">
                 {item.label}
               </a>
             </li>
@@ -62,7 +62,7 @@ export const Footer: React.FC = () => (
         </ul>
         <div className="mt-6 space-y-3 text-sm">
           {siteConfig.contactEmail ? (
-            <a href={`mailto:${siteConfig.contactEmail}`} className="flex items-center gap-2 hover:text-white">
+            <a href={`mailto:${siteConfig.contactEmail}`} className="flex items-center gap-2 hover:text-brand-primary">
               <Mail className="h-4 w-4" aria-hidden="true" />
               {siteConfig.contactEmail}
             </a>
@@ -73,7 +73,7 @@ export const Footer: React.FC = () => (
         </div>
       </div>
     </div>
-    <div className="border-t border-white/[0.06]">
+    <div className="border-t border-brand-border">
       <div className="container-content flex flex-col gap-2 py-5 text-xs text-slate-500 sm:flex-row sm:justify-between">
         <span>© {BUILD_YEAR} AI Desk.</span>
         <span>Free Public Beta trước · AI Desk Pro sau</span>

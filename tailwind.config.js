@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-// Stitch V4: dark premium theme. Semantic tokens (ink/muted/subtle/paper/line) are the dark
-// equivalents so pages and components share one palette.
+// AI Desk V3 keeps the legacy semantic palette for resource pages and adds an explicit
+// premium-light token family for the homepage and shared chrome.
 export default {
   content: [
     "./index.html",
@@ -9,6 +9,17 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          navy: '#0B1F4D',
+          primary: '#2563EB',
+          sky: '#60A5FA',
+          ice: '#EAF2FF',
+          surface: '#F8FAFC',
+          text: '#1F2937',
+          muted: '#64748B',
+          border: '#E5E7EB',
+          success: '#10B981',
+        },
         navy: {
           DEFAULT: '#0A0F1C',
           950: '#05080F',
@@ -38,7 +49,7 @@ export default {
         content: '1220px',
       },
       borderRadius: {
-        card: '14px',
+        card: '16px',
       },
     },
   },

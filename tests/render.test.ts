@@ -49,12 +49,12 @@ const FORBIDDEN = [
   'Đã xếp hàng',
 ]
 
-test('home page renders every section in order with the approved headline', async () => {
+test('home page renders every section in order with the V3 approved headline', async () => {
   const html = await page('/')
-  assert.match(html, /Một bàn làm việc\./)
-  assert.match(html, /Nhiều AI cùng phối hợp\./)
+  assert.match(html, /AI Desk điều phối/)
+  assert.match(html, /mọi AI của bạn/)
   assert.match(html, /Không cần tài khoản AI Desk/)
-  const ids = ['capabilities', 'features', 'how-it-works', 'product', 'download', 'roadmap', 'faq', 'community', 'pro-news']
+  const ids = ['capabilities', 'features', 'how-it-works', 'product', 'roadmap', 'download', 'faq', 'community', 'pro-news']
   let last = -1
   for (const id of ids) {
     const at = html.indexOf(`id="${id}"`)
@@ -64,6 +64,20 @@ test('home page renders every section in order with the approved headline', asyn
   assert.match(html, /Từ ý tưởng đến kết quả trong một quy trình rõ ràng/)
   assert.match(html, /Được thiết kế để làm việc thật, mỗi ngày/)
   assert.match(html, /Đăng ký nhận tin khi có AI Desk Pro/)
+})
+
+test('V3 homepage exposes the truthful hub workflow and verified resource previews', async () => {
+  const html = await page('/')
+  assert.match(html, /AI Desk Hub/)
+  assert.match(html, /GPT Web Manager/)
+  assert.match(html, /Codex · Claude Code/)
+  assert.match(html, /Assisted workflow/)
+  assert.match(html, /Result to Manager/)
+  assert.match(html, /Manager Action — mẫu theo source/)
+  assert.match(html, /Full Autonomous chưa có/)
+  for (const route of ['/install', '/tutorials', '/prompts', '/roadmap', '/why-ai-desk']) {
+    assert.ok(html.includes(`href="${route}"`), `V3 preview must link ${route}`)
+  }
 })
 
 test('every in-page anchor points at an element that exists', async () => {

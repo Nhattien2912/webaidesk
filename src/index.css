@@ -6,7 +6,7 @@
   html {
     scroll-behavior: smooth;
     scroll-padding-top: 4.5rem;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -19,6 +19,20 @@
   :focus-visible {
     outline: 2px solid #7DB2FF;
     outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .premium-card {
+    @apply rounded-card border border-brand-border bg-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.35)];
+  }
+
+  .premium-kicker {
+    @apply text-sm font-semibold uppercase tracking-[0.16em] text-brand-primary;
+  }
+
+  .premium-title {
+    @apply text-balance text-3xl font-semibold tracking-[-0.035em] text-brand-navy sm:text-4xl lg:text-5xl;
   }
 }
 
@@ -96,6 +110,44 @@
 .skip-link:focus {
   top: 1rem;
 }
+
+.premium-home {
+  background: #fff;
+  color: #1f2937;
+  overflow: clip;
+}
+
+.premium-home .section { background-color: #fff; }
+.premium-home .section:nth-of-type(even) { background-color: #f8fafc; }
+.premium-home .section-title { color: #0b1f4d; }
+.premium-home .section-lead,
+.premium-home .text-muted { color: #64748b; }
+.premium-home .text-subtle { color: #64748b; }
+.premium-home .text-white,
+.premium-home .text-ink { color: #1f2937; }
+.premium-home .text-accent-light { color: #2563eb; }
+.premium-home .bg-navy,
+.premium-home .bg-navy-900,
+.premium-home .bg-navy-950 { background-color: #fff; }
+.premium-home .bg-navy-800\/70 { background-color: rgba(255, 255, 255, 0.92); }
+.premium-home .border-line,
+.premium-home .border-white\/\[0\.06\] { border-color: #e5e7eb; }
+.premium-home .card {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #e5e7eb;
+  box-shadow: 0 18px 50px -32px rgba(37, 99, 235, 0.42);
+}
+.premium-home .btn-secondary-dark {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #0b1f4d;
+}
+.premium-home .btn-secondary-dark:hover { background: #eaf2ff; }
+.premium-home [role='tablist'] { background: #f1f5f9; border-color: #e5e7eb; }
+.premium-home [role='tab'][aria-selected='true'] { background: #fff; color: #0b1f4d; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
+
+.reveal-card { transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease; }
+.reveal-card:hover { transform: translateY(-4px); border-color: #bfdbfe; box-shadow: 0 24px 60px -34px rgba(37,99,235,.55); }
 
 @media (prefers-reduced-motion: reduce) {
   html {
