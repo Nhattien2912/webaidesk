@@ -1,6 +1,9 @@
 import React from 'react'
-import { AlertTriangle, Check, Download, ExternalLink, Globe2, Monitor, ShieldCheck } from 'lucide-react'
-import { publicAlphaRelease, publicDownloadIsOpen } from '../data/publicAlphaRelease'
+import { AlertTriangle, Check, Download, ExternalLink, Globe2, Loader2, Monitor, ShieldCheck } from 'lucide-react'
+import { publicAlphaRelease } from '../data/publicAlphaRelease'
+import { siteConfig } from '../config/site'
+import { formatBytes, validateReleaseManifest, type DownloadState } from '../lib/releaseManifest'
+import { useDownloadState } from '../lib/useDownloadState'
 
 const List: React.FC<{ items: readonly string[]; tone?: 'positive' | 'warning' }> = ({ items, tone = 'positive' }) => (
   <ul className="mt-5 space-y-3">
@@ -27,9 +30,84 @@ const Card: React.FC<{ title: string; children: React.ReactNode; icon?: React.Re
   </section>
 )
 
+function formatDate(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
+
+/** The only opening path is a DownloadState that already passed validateReleaseManifest. */
+export const PublicAlphaDownloadCard: React.FC<{ state: DownloadState; fallbackVersion: string }> = ({ state, fallbackVersion }) => {
+  const checked =
+    state.kind === 'available'
+      ? validateReleaseManifest(state.manifest, { allowedHosts: siteConfig.release.allowedHosts, allowUnsigned: false })
+      : null
+  const manifest = checked?.ok ? checked.manifest : null
+  const installer = checked?.ok ? checked.primary : null
+  const available = manifest !== null && installer !== null
+
+  return (
+    <div
+      className={`card p-6 text-center sm:p-7 ${available ? 'border-emerald-300/20' : 'border-amber-300/20'}`}
+      data-release-gate={available ? 'open' : 'closed'}
+      data-manifest-state={state.kind}
+      aria-busy={state.kind === 'loading'}
+    >
+      <span
+        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
+          available ? 'bg-emerald-300/10 text-emerald-200' : 'bg-amber-300/10 text-amber-200'
+        }`}
+      >
+        {state.kind === 'loading' ? (
+          <Loader2 className="h-7 w-7 motion-safe:animate-spin" aria-hidden="true" />
+        ) : (
+          <Download className="h-7 w-7" aria-hidden="true" />
+        )}
+      </span>
+      <p className={`mt-4 text-sm font-medium ${available ? 'text-emerald-200' : 'text-amber-200'}`}>
+        {available ? 'Sẵn sàng tải' : 'Coming Soon'}
+      </p>
+      <p className="mt-1 text-sm text-muted">Windows x64 · v{manifest?.version ?? fallbackVersion}</p>
+
+      {installer && manifest ? (
+        <>
+          <a href={installer.url} className="btn-primary mt-5 w-full" rel="noopener">
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Tải bộ cài cho Windows
+          </a>
+          <dl className="mt-5 space-y-2 border-t border-line pt-4 text-left text-xs">
+            <div className="flex justify-between gap-3">
+              <dt className="text-subtle">Dung lượng</dt>
+              <dd className="text-ink">{formatBytes(installer.sizeBytes)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-subtle">Phát hành</dt>
+              <dd className="text-ink">{formatDate(manifest.releasedAt)}</dd>
+            </div>
+            <div>
+              <dt className="text-subtle">SHA-256</dt>
+              <dd className="mt-1 break-all font-mono text-[11px] leading-relaxed text-ink">{installer.sha256}</dd>
+            </div>
+          </dl>
+        </>
+      ) : (
+        <>
+          <button type="button" className="btn-primary mt-5 w-full" disabled>
+            Chưa mở tải
+          </button>
+          <p className="mt-3 text-xs leading-relaxed text-subtle">
+            {state.kind === 'loading'
+              ? 'Đang kiểm tra bản phát hành đã ký và được phê duyệt…'
+              : 'Chưa có bản phát hành hợp lệ. Không dùng tệp hoặc liên kết thay thế.'}
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 export const DownloadPage: React.FC = () => {
   const release = publicAlphaRelease
-  const canDownload = publicDownloadIsOpen(release)
+  const download = useDownloadState()
 
   return (
     <div className="bg-navy">
@@ -53,19 +131,7 @@ export const DownloadPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="card border-amber-300/20 p-6 text-center sm:p-7" data-release-gate={canDownload ? 'open' : 'closed'}>
-              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
-                <Download className="h-7 w-7" aria-hidden="true" />
-              </span>
-              <p className="mt-4 text-sm font-medium text-amber-200">Coming Soon</p>
-              <p className="mt-1 text-sm text-muted">Windows x64 · v{release.version}</p>
-              <button type="button" className="btn-primary mt-5 w-full" disabled={!canDownload}>
-                Chưa mở tải
-              </button>
-              <p className="mt-3 text-xs leading-relaxed text-subtle">
-                Không có tệp thay thế hoặc liên kết tải chưa được xác minh.
-              </p>
-            </div>
+            <PublicAlphaDownloadCard state={download} fallbackVersion={release.version} />
           </div>
         </div>
       </div>

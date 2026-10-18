@@ -1,15 +1,8 @@
-export type PublicAlphaAvailability = 'coming-soon' | 'available'
-
 export interface PublicAlphaRelease {
   product: 'AI Desk'
   version: string
   channel: 'Public Alpha'
   platform: 'Windows x64'
-  availability: PublicAlphaAvailability
-  approved: boolean
-  signed: boolean
-  downloadUrl: string | null
-  sha256: string | null
   metadataCommit: string
   sourceCommit: string
   supportedFeatures: readonly string[]
@@ -21,19 +14,14 @@ export interface PublicAlphaRelease {
 }
 
 /**
- * Public website projection of the reviewed desktop release metadata at website implementation
- * time. Artifact fields stay null until a signed, hash-verified installer is explicitly approved.
+ * Product copy from the reviewed desktop release metadata. Artifact identity and availability are
+ * deliberately absent: the live, validated /api/releases/latest manifest is their only source.
  */
 export const publicAlphaRelease: PublicAlphaRelease = {
   product: 'AI Desk',
   version: '0.2.0',
   channel: 'Public Alpha',
   platform: 'Windows x64',
-  availability: 'coming-soon',
-  approved: false,
-  signed: false,
-  downloadUrl: null,
-  sha256: null,
   metadataCommit: '39a0b38f151b919f2e40ec04a157830ea5a8a716',
   sourceCommit: 'cef17b1cadf91eef9c60c8505ad7165eb8c02ff2',
   supportedFeatures: [
@@ -73,16 +61,4 @@ export const publicAlphaRelease: PublicAlphaRelease = {
     'Bản cài Windows và kiểm thử E2E đóng gói chưa hoàn tất.',
     'Extension Chrome/Brave cần bước Load unpacked thủ công trong giai đoạn Alpha.',
   ],
-}
-
-export function publicDownloadIsOpen(release: PublicAlphaRelease): boolean {
-  return (
-    release.availability === 'available' &&
-    release.approved === true &&
-    release.signed === true &&
-    typeof release.downloadUrl === 'string' &&
-    /^https:\/\/webaidesk\.pages\.dev\/api\/download\/[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.exe$/.test(release.downloadUrl) &&
-    typeof release.sha256 === 'string' &&
-    /^[a-f0-9]{64}$/i.test(release.sha256)
-  )
 }

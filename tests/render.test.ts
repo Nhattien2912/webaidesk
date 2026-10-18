@@ -103,12 +103,84 @@ test('Public Alpha download page is responsive content with a hard-closed releas
   assert.match(html, /Windows x64/)
   assert.match(html, /Coming Soon/)
   assert.match(html, /data-release-gate="closed"/)
+  assert.match(html, /data-manifest-state="loading"/)
   assert.match(html, /<button[^>]*disabled/)
   assert.match(html, /Manual và Assisted/)
   assert.match(html, /Chrome \/ Brave và GPT Bridge/)
   assert.match(html, /Full Autonomous/)
   assert.ok(!/href="[^"]*\.exe/.test(html), 'closed page must not expose an installer URL')
   assert.ok(!/[a-f0-9]{64}/i.test(html), 'closed page must not publish an artifact checksum')
+})
+
+test('Public Alpha card opens only for a validated signed manifest and renders its exact metadata', async () => {
+  const PublicAlphaDownloadCard = await component<{ state: unknown; fallbackVersion: string }>(
+    '/src/pages/DownloadPage.tsx',
+    'PublicAlphaDownloadCard',
+  )
+  const unavailable = render(
+    h(PublicAlphaDownloadCard, { state: { kind: 'unavailable', reason: 'manifest HTTP 404' }, fallbackVersion: '0.2.0' }),
+  )
+  assert.match(unavailable, /data-release-gate="closed"/)
+  assert.match(unavailable, /Coming Soon/)
+  assert.ok(!unavailable.includes('manifest HTTP 404'), '404 is a normal unavailable state, not user-facing fallback guidance')
+  assert.ok(!unavailable.includes('<a '), 'unavailable state must not expose a fallback download')
+
+  const installer = {
+    kind: 'installer',
+    fileName: 'AI-Desk-Setup-0.2.0.exe',
+    url: 'https://webaidesk.pages.dev/api/download/AI-Desk-Setup-0.2.0.exe',
+    sizeBytes: 104857600,
+    sha256: 'c'.repeat(64),
+    signature: 'signed',
+    signer: 'Approved Test Publisher',
+  }
+  const available = render(
+    h(PublicAlphaDownloadCard, {
+      fallbackVersion: '0.1.0',
+      state: {
+        kind: 'available',
+        primary: installer,
+        manifest: {
+          schemaVersion: 1,
+          channel: 'stable',
+          status: 'published',
+          approved: true,
+          version: '0.2.0',
+          releasedAt: '2026-10-18T00:00:00.000Z',
+          minOs: 'Windows 10/11 64-bit',
+          files: [installer],
+        },
+      },
+    }),
+  )
+  assert.match(available, /data-release-gate="open"/)
+  assert.match(available, /Sẵn sàng tải/)
+  assert.match(available, /Windows x64 · v0\.2\.0/)
+  assert.match(available, /100\.0 MB/)
+  assert.ok(available.includes(installer.url))
+  assert.ok(available.includes(installer.sha256))
+
+  const unsigned = render(
+    h(PublicAlphaDownloadCard, {
+      fallbackVersion: '0.2.0',
+      state: {
+        kind: 'available',
+        primary: { ...installer, signature: 'unsigned' },
+        manifest: {
+          schemaVersion: 1,
+          channel: 'stable',
+          status: 'published',
+          approved: true,
+          version: '0.2.0',
+          releasedAt: '2026-10-18T00:00:00.000Z',
+          minOs: 'Windows 10/11 64-bit',
+          files: [{ ...installer, signature: 'unsigned' }],
+        },
+      },
+    }),
+  )
+  assert.match(unsigned, /data-release-gate="closed"/)
+  assert.ok(!unsigned.includes(installer.url))
 })
 
 test('DownloadCard: unavailable state disables the CTA; available state shows manifest values only', async () => {
