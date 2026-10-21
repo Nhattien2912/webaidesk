@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "webaidesk-studio-local",
+  "main": "local/cms-dev-worker.ts",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "staging",
+    "CMS_ADMIN_ENABLED": "true",
+    "ACCESS_TEAM_DOMAIN": "local.invalid",
+    "ACCESS_AUD": "local-only",
+    "ACCESS_ALLOWED_IDENTITIES": "local-owner@invalid.test",
+    "CMS_ALLOWED_ORIGINS": "http://localhost:8787,http://127.0.0.1:8787,http://localhost:8793,http://127.0.0.1:8793",
+    "CMS_CSRF_SECRET": "local-only-csrf-boundary-32-characters-minimum",
+    "COMMENTS_TURNSTILE_SECRET_KEY": "local-only-siteverify-boundary",
+    "COMMENTS_TURNSTILE_ALLOWED_HOSTNAMES": "local.invalid",
+    "COMMENTS_TURNSTILE_ACTION": "comment",
+    "COMMENTS_IP_HASH_SECRET": "local-only-comment-hmac-32-characters-minimum",
+    "CMS_ALLOWED_IMAGE_HOSTS": "i.ytimg.com,images.example.test",
+    "CMS_ALLOWED_DOWNLOAD_HOSTS": "downloads.example.test",
+    "CMS_MEDIA_RETENTION_DAYS": "30"
+  },
+  "assets": {
+    "directory": "./dist-cms-local",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/admin/preview/*"]
+  },
+  "d1_databases": [{
+    "binding": "CMS_DB",
+    "database_name": "aidesk-studio-local",
+    "database_id": "11111111-1111-1111-1111-111111111111",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{
+    "binding": "CMS_MEDIA",
+    "bucket_name": "aidesk-studio-media-local"
+  }]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aidesk-studio-private",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "dist-private",
+  "vars": {
+    "ENVIRONMENT": "staging",
+    "CMS_ADMIN_ENABLED": "true",
+    "ACCESS_TEAM_DOMAIN": "<ACCESS_TEAM>.cloudflareaccess.com",
+    "ACCESS_AUDIENCE_MAP": "{\"aidesk-studio-private.pages.dev\":\"<ACCESS_AUD_TAG>\"}",
+    "ACCESS_ALLOWED_IDENTITIES": "<OWNER_EMAIL>",
+    "PRIVATE_ADMIN_HOSTNAMES": "aidesk-studio-private.pages.dev",
+    "CMS_ALLOWED_ORIGINS": "https://aidesk-studio-private.pages.dev"
+  },
+  "d1_databases": [{
+    "binding": "CMS_DB",
+    "database_name": "aidesk-studio-staging",
+    "database_id": "<STAGING_D1_ID>",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{
+    "binding": "CMS_MEDIA",
+    "bucket_name": "aidesk-studio-media-staging"
+  }]
+}

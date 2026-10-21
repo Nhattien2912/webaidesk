@@ -1,9 +1,32 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { PlayCircle, Search, Tag, Clock, Filter, BookOpen } from 'lucide-react'
-import { tutorialVideos, videoCategories, type TutorialVideo } from '../data/tutorials'
+import type { TutorialVideo, VideoStatus } from '../data/tutorials'
+import { usePageContent, type PageContent } from '../lib/usePageContent'
+import type { PageDoc } from '../content/pageContent'
+import { orderCmsVideos, toTutorialVideo, type CmsVideoRecord } from '../lib/cmsVideos'
+
+// Editorial content (texts, categories, tutorial videos) comes from the page content registry: CMS-published values over code defaults.
+// Playback rules (only published videos with a real YouTube id play), thumbnails and layout stay in code.
+interface VideoCategory {
+  id: string
+  label: string
+}
+const VIDEO_STATUSES: VideoStatus[] = ['published', 'coming-soon', 'draft']
+const toVideo = (item: Record<string, string>, mediaUrl: (id: string) => string): TutorialVideo => ({
+  id: item.id ?? '',
+  title: item.title ?? '',
+  description: item.description ?? '',
+  category: item.category ?? '',
+  youtubeId: item.youtubeId ?? '',
+  thumbnail: item.thumbnailMediaId ? mediaUrl(item.thumbnailMediaId) : '',
+  duration: item.duration ?? '',
+  publishedAt: item.publishedAt ?? '',
+  status: VIDEO_STATUSES.includes(item.status as VideoStatus) ? (item.status as VideoStatus) : 'coming-soon',
+})
+const categoriesOf = (c: PageContent): VideoCategory[] => [{ id: 'all', label: c.t('cat.allLabel') }, ...c.items('cat.items').map((cat) => ({ id: cat.id ?? '', label: cat.label ?? '' }))]
 
 const getYoutubeThumbnail = (youtubeId: string): string =>
-  youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : ''
+  youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : ''
 
 // Status badge
 const StatusBadge: React.FC<{ status: TutorialVideo['status'] }> = ({ status }) => {
@@ -23,7 +46,7 @@ const StatusBadge: React.FC<{ status: TutorialVideo['status'] }> = ({ status }) 
 
 // Video card thumbnail
 const VideoThumbnail: React.FC<{ video: TutorialVideo }> = ({ video }) => {
-  const thumbUrl = video.youtubeId ? getYoutubeThumbnail(video.youtubeId) : ''
+  const thumbUrl = video.thumbnail || (video.youtubeId ? getYoutubeThumbnail(video.youtubeId) : '')
   const isAvailable = video.status === 'published' && video.youtubeId
 
   return (
@@ -65,12 +88,13 @@ const CategoryTag: React.FC<{ label: string }> = ({ label }) => (
 )
 
 // Video card
-const VideoCard: React.FC<{ video: TutorialVideo; onPlay: (v: TutorialVideo) => void }> = ({
+const VideoCard: React.FC<{ video: TutorialVideo; categories: VideoCategory[]; onPlay: (v: TutorialVideo) => void }> = ({
   video,
+  categories,
   onPlay,
 }) => {
   const categoryLabel =
-    videoCategories.find((c) => c.id === video.category)?.label ?? video.category
+    categories.find((c) => c.id === video.category)?.label ?? video.category
   const isPlayable = video.status === 'published' && video.youtubeId
 
   return (
@@ -121,7 +145,7 @@ const VideoModal: React.FC<{
   onClose: () => void
 }> = ({ video, onClose }) => {
   if (!video) return null
-  const embedUrl = `https://www.youtube.com/embed/${video.youtubeId}?autoplay=1&rel=0`
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.youtubeId)}?autoplay=1&rel=0`
 
   return (
     <div
@@ -171,22 +195,42 @@ const EmptyState: React.FC<{ query: string; category?: string }> = ({ query }) =
   </div>
 )
 
-export const TutorialsPage: React.FC = () => {
+export const TutorialsPage: React.FC<{ content?: PageDoc | null; mediaBase?: string }> = ({ content, mediaBase }) => {
+  const c = usePageContent('tutorials', content, mediaBase)
+  const videoCategories = useMemo(() => categoriesOf(c), [c])
+  const tutorialVideos = useMemo(() => c.items('videos.items').map((item) => toVideo(item, c.mediaUrl)), [c])
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [playingVideo, setPlayingVideo] = useState<TutorialVideo | null>(null)
 
+  const [cmsVideos, setCmsVideos] = useState<TutorialVideo[]>([])
+  useEffect(() => {
+    let active = true
+    fetch('/api/content/videos?limit=50')
+      .then(async (response) => (response.ok ? ((await response.json()) as { data?: CmsVideoRecord[] }).data ?? [] : []))
+      .then((records) => {
+        if (active) setCmsVideos(orderCmsVideos(records).map(toTutorialVideo).filter((v): v is TutorialVideo => v !== null))
+      })
+      .catch(() => {
+        if (active) setCmsVideos([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+  const allVideos = useMemo(() => [...cmsVideos, ...tutorialVideos], [cmsVideos, tutorialVideos])
+
   const filtered = useMemo(() => {
-    return tutorialVideos.filter((v) => {
+    return allVideos.filter((v) => {
       const matchCategory = activeCategory === 'all' || v.category === activeCategory
       const q = query.toLowerCase()
       const matchQuery =
         !q || v.title.toLowerCase().includes(q) || v.description.toLowerCase().includes(q)
       return matchCategory && matchQuery
     })
-  }, [query, activeCategory])
+  }, [allVideos, query, activeCategory])
 
-  const featuredVideo = tutorialVideos.find((v) => v.status === 'published') ?? tutorialVideos[0]
+  const featuredVideo = allVideos.find((v) => v.status === 'published') ?? allVideos[0]
 
   return (
     <div className="premium-page">
@@ -196,22 +240,23 @@ export const TutorialsPage: React.FC = () => {
           <a href="/" className="text-sm font-medium text-accent-light hover:underline">
             ← Về trang chủ
           </a>
-          <p className="eyebrow mt-6">Thư viện video</p>
+          <p className="eyebrow mt-6">{c.t('hero.eyebrow')}</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Video hướng dẫn AI Desk
+            {c.t('hero.title')}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-            Học cách cài đặt và sử dụng AI Desk qua các video hướng dẫn từng bước. Video đang được
-            chuẩn bị cùng với bản Public Beta.
+            {c.t('hero.intro')}
           </p>
-          <div
-            role="status"
-            aria-live="polite"
-            className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/[0.05] px-3 py-1.5 text-sm text-amber-300"
-          >
-            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-            Video đang được sản xuất — cập nhật khi có bản Beta
-          </div>
+          {!c.hidden('notice') && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/[0.05] px-3 py-1.5 text-sm text-amber-300"
+            >
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              {c.t('notice.text')}
+            </div>
+          )}
         </div>
       </div>
 
@@ -220,32 +265,55 @@ export const TutorialsPage: React.FC = () => {
         {featuredVideo && (
           <section aria-labelledby="featured-title" className="mb-12">
             <h2 id="featured-title" className="mb-6 text-xl font-semibold text-white">
-              Video nổi bật
+              {c.t('featured.title')}
             </h2>
             <div className="card overflow-hidden lg:grid lg:grid-cols-[1.6fr_1fr]">
-              <div className="relative aspect-video bg-navy-800 lg:aspect-auto">
-                <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 text-subtle">
-                  <PlayCircle className="h-16 w-16 opacity-20" aria-hidden="true" />
-                  <span className="text-sm">Video sắp có</span>
+              {featuredVideo.status === 'published' && featuredVideo.youtubeId ? (
+                <div className="relative aspect-video bg-navy-800 lg:aspect-auto">
+                  <img
+                    src={featuredVideo.thumbnail || getYoutubeThumbnail(featuredVideo.youtubeId)}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                    aria-hidden="true"
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="relative aspect-video bg-navy-800 lg:aspect-auto">
+                  <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 text-subtle">
+                    <PlayCircle className="h-16 w-16 opacity-20" aria-hidden="true" />
+                    <span className="text-sm">Video sắp có</span>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col justify-center p-6">
                 <CategoryTag
-                  label={videoCategories.find((c) => c.id === featuredVideo.category)?.label ?? ''}
+                  label={videoCategories.find((c) => c.id === featuredVideo.category)?.label ?? featuredVideo.category}
                 />
                 <h3 className="mt-3 text-xl font-semibold text-white">{featuredVideo.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-muted">
                   {featuredVideo.description}
                 </p>
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="btn mt-6 w-fit cursor-not-allowed border border-white/10 bg-white/[0.03] text-subtle"
-                >
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  Sắp ra mắt
-                </button>
+                {featuredVideo.status === 'published' && featuredVideo.youtubeId ? (
+                  <button
+                    type="button"
+                    onClick={() => setPlayingVideo(featuredVideo)}
+                    className="btn-primary mt-6 w-fit"
+                  >
+                    <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                    Xem video
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    className="btn mt-6 w-fit cursor-not-allowed border border-white/10 bg-white/[0.03] text-subtle"
+                  >
+                    <Clock className="h-4 w-4" aria-hidden="true" />
+                    Sắp ra mắt
+                  </button>
+                )}
               </div>
             </div>
           </section>
@@ -297,7 +365,7 @@ export const TutorialsPage: React.FC = () => {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.length > 0 ? (
             filtered.map((video) => (
-              <VideoCard key={video.id} video={video} onPlay={setPlayingVideo} />
+              <VideoCard key={video.id} video={video} categories={videoCategories} onPlay={setPlayingVideo} />
             ))
           ) : (
             <EmptyState query={query} category={activeCategory} />
@@ -305,24 +373,21 @@ export const TutorialsPage: React.FC = () => {
         </div>
 
         {/* Coming soon callout */}
-        <div className="mt-12 rounded-card border border-white/[0.06] bg-navy-900 p-6 text-center">
-          <PlayCircle className="mx-auto h-10 w-10 text-accent-light opacity-60" aria-hidden="true" />
-          <h2 className="mt-4 text-lg font-semibold text-white">
-            Video đang được sản xuất
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Các video hướng dẫn sẽ được ra mắt cùng bản Public Beta. Đăng ký để nhận thông báo khi
-            có video mới.
-          </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <a href="/#pro-news" className="btn-primary">
-              Nhận thông báo
-            </a>
-            <a href="/install" className="btn-secondary-dark">
-              Xem hướng dẫn cài đặt
-            </a>
+        {!c.hidden('coming-soon') && (
+          <div className="mt-12 rounded-card border border-white/[0.06] bg-navy-900 p-6 text-center">
+            <PlayCircle className="mx-auto h-10 w-10 text-accent-light opacity-60" aria-hidden="true" />
+            <h2 className="mt-4 text-lg font-semibold text-white">{c.t('coming.title')}</h2>
+            <p className="mt-2 text-sm text-muted">{c.t('coming.text')}</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <a href="/#pro-news" className="btn-primary">
+                {c.t('coming.btn1')}
+              </a>
+              <a href="/install" className="btn-secondary-dark">
+                {c.t('coming.btn2')}
+              </a>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Video modal */}

@@ -47,7 +47,7 @@ export const DirectDownloadNotice: React.FC<{ release: DirectRelease; className?
   <div role="note" data-direct-download-notice className={`rounded-[10px] border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 ${className}`}>
     <p className="flex items-center gap-2 font-semibold text-amber-900">
       <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-      Bản {release.versionLabel} chưa ký số
+      Bản {release.versionLabel} Beta chưa ký số
     </p>
     <p className="mt-1 text-amber-950">
       Bộ cài bên trong chưa có chữ ký số và chưa hoàn tất đánh giá bảo mật. Windows
@@ -89,7 +89,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
 
         <div className="flex flex-col gap-2 lg:items-end">
           {href ? (
-            <a href={href} className="btn-primary px-7" rel="noopener" {...(direct ? { 'data-direct-download': 'true' } : {})}>
+            <a href={href} download={direct?.fileName} className="btn-primary px-7" rel="noopener" {...(direct ? { 'data-direct-download': 'true' } : {})}>
               <Download className="h-4 w-4" aria-hidden="true" />
               Tải AI Desk cho Windows
             </a>
@@ -116,7 +116,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
       <dl className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Trạng thái phát hành">
           {direct ? (
-            <span className="text-amber-800">{direct.versionLabel} · chưa ký số</span>
+            <span className="text-amber-800">Beta · chưa ký số</span>
           ) : manifest ? (
             <span className="text-emerald-700">Đã phát hành · {manifest.channel}</span>
           ) : loading ? (
@@ -197,8 +197,8 @@ export const DownloadSection: React.FC<{ state: DownloadView }> = ({ state }) =>
             Tải AI Desk cho Windows
           </h2>
           <p className="section-lead">
-            Miễn phí trong giai đoạn Public Beta, không cần đăng nhập. Bộ cài được phân phối qua Cloudflare kèm mã
-            SHA-256 để bạn tự kiểm tra tệp tải về.
+            Miễn phí trong giai đoạn Public Beta, không cần đăng nhập. Gói RAR cho Windows x64 được phân phối qua
+            Cloudflare kèm mã SHA-256 để bạn tự kiểm tra tệp tải về.
           </p>
         </div>
         <ul className="space-y-2 text-sm">
@@ -220,7 +220,7 @@ export const DownloadSection: React.FC<{ state: DownloadView }> = ({ state }) =>
         </code>
       </p>
       <a href="/download" className="mt-5 inline-flex text-sm font-medium text-accent-light hover:underline">
-        Xem phạm vi, yêu cầu và hướng dẫn Public Alpha →
+        Xem phạm vi, yêu cầu và hướng dẫn bản Beta →
       </a>
     </div>
   </section>

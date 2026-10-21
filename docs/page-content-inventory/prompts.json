@@ -1,0 +1,102 @@
+{
+  "page": "prompts",
+  "path": "/prompts",
+  "title": "Thư viện Prompt AI Desk",
+  "hidden": [],
+  "values": {
+    "hero.eyebrow": "Thư viện Prompt",
+    "hero.title": "Thư viện Prompt AI Desk",
+    "hero.intro": "Các mẫu action được đối chiếu với schema trong source AI Desk. Bạn có thể sao chép hoặc tải nguyên văn; khả năng tương thích với gói 0.3.0 Beta vẫn cần kiểm chứng.",
+    "hero.badge1": "Đã xác minh: schema khớp source code",
+    "hero.badge2": "Thử nghiệm: Đang kiểm chứng",
+    "hero.badge3": "Sắp có: Chưa sẵn sàng",
+    "integrity.lead": "Phạm vi xác minh:",
+    "integrity.text": "nhãn xác minh chỉ khẳng định cấu trúc action khớp source hiện tại. Nó không khẳng định gói tải 0.3.0 Beta đã chứa cùng protocol. Không có secret, token, key hay URL nội bộ trong các mẫu.",
+    "cat.allLabel": "Tất cả",
+    "cat.items": [
+      {
+        "id": "manager",
+        "label": "GPT Manager"
+      },
+      {
+        "id": "single-worker",
+        "label": "Single Worker"
+      }
+    ],
+    "prompts.items": [
+      {
+        "id": "manager-action-template",
+        "title": "Manager Action — mẫu theo source",
+        "description": "Mẫu tạo AI_DESK_MANAGER_ACTION với đúng các trường mà parser hiện tại chấp nhận.",
+        "category": "manager",
+        "mode": "Action template",
+        "workers": "Codex\nClaude Code\nOpenCode\nAntigravity\nAuto",
+        "aiDeskVersion": "Source hiện tại",
+        "status": "verified",
+        "statusNote": "Schema được đối chiếu với src/shared/managerAction.ts. Khả năng hoạt động trong gói 0.3.0 Beta chưa được xác minh độc lập.",
+        "updatedAt": "2026-10-18",
+        "content": "Bạn đang chuẩn bị một action cho AI Desk.\n\nKhi người dùng cung cấp nhiệm vụ, hãy trả về đúng một JSON object và không thêm văn bản bên ngoài JSON. Giữ nguyên các khóa sau:\n- type: \"AI_DESK_MANAGER_ACTION\"\n- action: \"SEND_TO_WORKER\"\n- worker: một trong \"claude\", \"codex\", \"opencode\", \"antigravity\" hoặc \"auto\"\n- instruction: yêu cầu cụ thể dành cho worker\n- requestId: null để AI Desk tự tạo ID hiệu lực từ danh tính tin nhắn, hoặc một chuỗi ID do người dùng cung cấp\n- taskTitle: tiêu đề ngắn, không bắt buộc\n\nKhông thêm khóa khác. Không tự tuyên bố rằng action đã chạy; chỉ tạo JSON để AI Desk tiếp nhận."
+      },
+      {
+        "id": "codex-action-template",
+        "title": "Codex Action — mẫu một worker",
+        "description": "Biến thể giới hạn worker thành Codex, không thêm quy tắc điều phối chưa có trong source.",
+        "category": "single-worker",
+        "mode": "Action template",
+        "workers": "Codex",
+        "aiDeskVersion": "Source hiện tại",
+        "status": "verified",
+        "statusNote": "Schema được đối chiếu với src/shared/managerAction.ts. Người dùng vẫn phải kiểm tra trạng thái thực tế trong AI Desk.",
+        "updatedAt": "2026-10-18",
+        "content": "Bạn đang chuẩn bị một action cho AI Desk.\n\nKhi người dùng cung cấp nhiệm vụ, hãy trả về đúng một JSON object và không thêm văn bản bên ngoài JSON. Giữ nguyên các khóa sau:\n- type: \"AI_DESK_MANAGER_ACTION\"\n- action: \"SEND_TO_WORKER\"\n- worker: một trong \"claude\", \"codex\", \"opencode\", \"antigravity\" hoặc \"auto\"\n- instruction: yêu cầu cụ thể dành cho worker\n- requestId: null để AI Desk tự tạo ID hiệu lực từ danh tính tin nhắn, hoặc một chuỗi ID do người dùng cung cấp\n- taskTitle: tiêu đề ngắn, không bắt buộc\n\nKhông thêm khóa khác. Không tự tuyên bố rằng action đã chạy; chỉ tạo JSON để AI Desk tiếp nhận.\n\nTrong mẫu này, luôn đặt worker là \"codex\"."
+      }
+    ],
+    "qs.title": "Bắt đầu nhanh — 5 bước",
+    "qs.steps": [
+      {
+        "label": "Cài AI Desk",
+        "desc": "Tải và cài AI Desk Desktop trên Windows",
+        "href": "/install"
+      },
+      {
+        "label": "Kết nối Extension",
+        "desc": "Cài GPT Bridge Extension và kết nối",
+        "href": "/install#step-4"
+      },
+      {
+        "label": "Chọn Prompt",
+        "desc": "Chọn mẫu phù hợp từ thư viện này",
+        "href": "/prompts"
+      },
+      {
+        "label": "Nạp vào ChatGPT",
+        "desc": "Sao chép prompt và gửi vào ChatGPT Web",
+        "href": ""
+      },
+      {
+        "label": "Giao nhiệm vụ",
+        "desc": "Kiểm tra kết nối và bắt đầu làm việc",
+        "href": ""
+      }
+    ],
+    "qs.noteLead": "Lưu ý:",
+    "qs.noteText": "Nạp prompt không tự cấp quyền điều khiển máy, không tăng quota dịch vụ và không bảo đảm phần mềm đã kết nối. Đảm bảo đã hoàn thành cài đặt trước.",
+    "howto.title": "Cách sử dụng prompt",
+    "howto.steps": [
+      "Chọn prompt phù hợp với cách dùng của bạn (single worker / multi-worker).",
+      "Nhấn \"Sao chép\" để copy toàn bộ nội dung prompt.",
+      "Mở ChatGPT Web, bắt đầu cuộc trò chuyện mới.",
+      "Dán vào ô nhập và gửi. GPT Manager sẽ xác nhận vai trò.",
+      "Mô tả nhiệm vụ và bắt đầu điều phối."
+    ],
+    "warn.title": "Lưu ý quan trọng",
+    "warn.items": [
+      "Cần cài AI Desk trước khi dùng prompt",
+      "Prompt không tự kết nối Extension",
+      "Không bảo đảm hoạt động 100%",
+      "Mỗi chat GPT mới cần nạp lại prompt"
+    ],
+    "btn.install": "Hướng dẫn cài đặt",
+    "btn.videos": "Video hướng dẫn"
+  }
+}

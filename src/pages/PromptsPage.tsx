@@ -14,7 +14,31 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { prompts, promptCategories, type PromptMeta, type PromptStatus } from '../content/prompts'
+import type { PromptMeta, PromptStatus } from '../content/prompts'
+import { usePageContent, type PageContent } from '../lib/usePageContent'
+import type { PageDoc } from '../content/pageContent'
+
+// Editorial content (texts, categories, prompts) comes from the page content registry: CMS-published values over code defaults.
+// Status styling, copy/download behaviour and layout stay in code.
+interface PromptCategory {
+  id: string
+  label: string
+}
+const STATUS_VALUES: PromptStatus[] = ['verified', 'experimental', 'coming-soon']
+const toPrompt = (item: Record<string, string>): PromptMeta => ({
+  id: item.id ?? '',
+  title: item.title ?? '',
+  description: item.description ?? '',
+  category: item.category ?? '',
+  mode: item.mode ?? '',
+  workers: (item.workers ?? '').split(/\r?\n/).map((w) => w.trim()).filter(Boolean),
+  aiDeskVersion: item.aiDeskVersion ?? '',
+  status: STATUS_VALUES.includes(item.status as PromptStatus) ? (item.status as PromptStatus) : 'coming-soon',
+  statusNote: item.statusNote ?? '',
+  updatedAt: item.updatedAt ?? '',
+  content: item.content ?? '',
+})
+const promptCategoriesOf = (c: PageContent): PromptCategory[] => [{ id: 'all', label: c.t('cat.allLabel') }, ...c.items('cat.items').map((cat) => ({ id: cat.id ?? '', label: cat.label ?? '' }))]
 
 // Status badge config
 const STATUS_CONFIG: Record<
@@ -203,13 +227,14 @@ const PromptModal: React.FC<{
 // Prompt card
 const PromptCard: React.FC<{
   prompt: PromptMeta
+  categories: PromptCategory[]
   onPreview: (p: PromptMeta) => void
-}> = ({ prompt, onPreview }) => {
+}> = ({ prompt, categories, onPreview }) => {
   const { copiedId, copy } = useCopy()
   const statusConfig = STATUS_CONFIG[prompt.status]
   const StatusIcon = statusConfig.icon
   const isAvailable = prompt.status !== 'coming-soon'
-  const categoryLabel = promptCategories.find((c) => c.id === prompt.category)?.label ?? prompt.category
+  const categoryLabel = categories.find((c) => c.id === prompt.category)?.label ?? prompt.category
 
   return (
     <article className="card flex flex-col overflow-hidden transition-colors hover:border-white/20">
@@ -304,17 +329,11 @@ const PromptCard: React.FC<{
 }
 
 // Quick start guide
-const QuickStartGuide: React.FC = () => {
-  const steps = [
-    { step: '1', label: 'Cài AI Desk', desc: 'Tải và cài AI Desk Desktop trên Windows', href: '/install' },
-    { step: '2', label: 'Kết nối Extension', desc: 'Cài GPT Bridge Extension và kết nối', href: '/install#step-4' },
-    { step: '3', label: 'Chọn Prompt', desc: 'Chọn mẫu phù hợp từ thư viện này', href: '/prompts' },
-    { step: '4', label: 'Nạp vào ChatGPT', desc: 'Sao chép prompt và gửi vào ChatGPT Web', href: '#' },
-    { step: '5', label: 'Giao nhiệm vụ', desc: 'Kiểm tra kết nối và bắt đầu làm việc', href: '#' },
-  ]
+const QuickStartGuide: React.FC<{ c: PageContent }> = ({ c }) => {
+  const steps = c.items('qs.steps').map(({ label, desc, href }, index) => ({ step: String(index + 1), label, desc, href: href || '#' }))
   return (
     <div className="card p-6">
-      <h2 className="font-semibold text-white">Bắt đầu nhanh — 5 bước</h2>
+      <h2 className="font-semibold text-white">{c.t('qs.title')}</h2>
       <ol className="mt-5 space-y-3">
         {steps.map(({ step, label, desc, href }) => (
           <li key={step} className="flex items-start gap-4">
@@ -335,16 +354,17 @@ const QuickStartGuide: React.FC = () => {
         ))}
       </ol>
       <div className="mt-5 rounded-card border border-amber-400/20 bg-amber-400/[0.04] p-3 text-xs text-muted">
-        <strong className="text-amber-300">Lưu ý:</strong> Nạp prompt không tự cấp quyền điều
-        khiển máy, không tăng quota dịch vụ và không bảo đảm phần mềm đã kết nối. Đảm bảo đã
-        hoàn thành cài đặt trước.
+        <strong className="text-amber-300">{c.t('qs.noteLead')}</strong> {c.t('qs.noteText')}
       </div>
     </div>
   )
 }
 type StatusFilter = PromptStatus | 'all'
 
-export const PromptsPage: React.FC = () => {
+export const PromptsPage: React.FC<{ content?: PageDoc | null; mediaBase?: string }> = ({ content, mediaBase }) => {
+  const c = usePageContent('prompts', content, mediaBase)
+  const prompts = useMemo(() => c.items('prompts.items').map(toPrompt), [c])
+  const promptCategories = useMemo(() => promptCategoriesOf(c), [c])
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeStatus, setActiveStatus] = useState<StatusFilter>('all')
@@ -362,7 +382,7 @@ export const PromptsPage: React.FC = () => {
         p.workers.some((w) => w.toLowerCase().includes(q))
       return matchCat && matchStatus && matchQ
     })
-  }, [query, activeCategory, activeStatus])
+  }, [prompts, query, activeCategory, activeStatus])
 
   const statusFilters: { id: StatusFilter; label: string }[] = [
     { id: 'all', label: 'Tất cả' },
@@ -379,26 +399,25 @@ export const PromptsPage: React.FC = () => {
           <a href="/" className="text-sm font-medium text-accent-light hover:underline">
             ← Về trang chủ
           </a>
-          <p className="eyebrow mt-6">Thư viện Prompt</p>
+          <p className="eyebrow mt-6">{c.t('hero.eyebrow')}</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Thư viện Prompt AI Desk
+            {c.t('hero.title')}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-            Các mẫu action được đối chiếu với schema trong source AI Desk. Bạn có thể sao chép
-            hoặc tải nguyên văn; khả năng tương thích với gói 0.2 Beta vẫn cần kiểm chứng.
+            {c.t('hero.intro')}
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <span className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-3 py-1.5 text-sm text-emerald-300">
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Đã xác minh: schema khớp source code
+              {c.t('hero.badge1')}
             </span>
             <span className="flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/[0.05] px-3 py-1.5 text-sm text-amber-300">
               <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
-              Thử nghiệm: Đang kiểm chứng
+              {c.t('hero.badge2')}
             </span>
             <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-subtle">
               <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              Sắp có: Chưa sẵn sàng
+              {c.t('hero.badge3')}
             </span>
           </div>
         </div>
@@ -408,14 +427,14 @@ export const PromptsPage: React.FC = () => {
         {/* Main content */}
         <div>
           {/* Integrity callout */}
-          <div className="mb-8 flex gap-3 rounded-card border border-accent/20 bg-accent/[0.04] p-4 text-sm text-muted">
-            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-accent-light" aria-hidden="true" />
-            <p>
-              <strong className="text-accent-light">Phạm vi xác minh:</strong> nhãn xác minh chỉ
-              khẳng định cấu trúc action khớp source hiện tại. Nó không khẳng định gói tải 0.2 Beta
-              đã chứa cùng protocol. Không có secret, token, key hay URL nội bộ trong các mẫu.
-            </p>
-          </div>
+          {!c.hidden('integrity') && (
+            <div className="mb-8 flex gap-3 rounded-card border border-accent/20 bg-accent/[0.04] p-4 text-sm text-muted">
+              <Shield className="mt-0.5 h-4 w-4 shrink-0 text-accent-light" aria-hidden="true" />
+              <p>
+                <strong className="text-accent-light">{c.t('integrity.lead')}</strong> {c.t('integrity.text')}
+              </p>
+            </div>
+          )}
 
           {/* Search and filters */}
           <div className="mb-6 space-y-4">
@@ -487,7 +506,7 @@ export const PromptsPage: React.FC = () => {
           {filtered.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               {filtered.map((prompt) => (
-                <PromptCard key={prompt.id} prompt={prompt} onPreview={setPreviewPrompt} />
+                <PromptCard key={prompt.id} prompt={prompt} categories={promptCategories} onPreview={setPreviewPrompt} />
               ))}
             </div>
           ) : (
@@ -503,19 +522,14 @@ export const PromptsPage: React.FC = () => {
 
         {/* Sidebar */}
         <aside className="space-y-6">
-          <QuickStartGuide />
+          {!c.hidden('quickstart') && <QuickStartGuide c={c} />}
 
           {/* How to use prompts */}
+          {!c.hidden('howto') && (
           <div className="card p-5">
-            <h2 className="font-semibold text-white">Cách sử dụng prompt</h2>
+            <h2 className="font-semibold text-white">{c.t('howto.title')}</h2>
             <ol className="mt-4 space-y-3 text-sm text-muted">
-              {[
-                'Chọn prompt phù hợp với cách dùng của bạn (single worker / multi-worker).',
-                'Nhấn "Sao chép" để copy toàn bộ nội dung prompt.',
-                'Mở ChatGPT Web, bắt đầu cuộc trò chuyện mới.',
-                'Dán vào ô nhập và gửi. GPT Manager sẽ xác nhận vai trò.',
-                'Mô tả nhiệm vụ và bắt đầu điều phối.',
-              ].map((step, i) => (
+              {c.list('howto.steps').map((step, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.04] text-xs font-bold text-subtle">
                     {i + 1}
@@ -525,28 +539,30 @@ export const PromptsPage: React.FC = () => {
               ))}
             </ol>
           </div>
+          )}
 
           {/* Warning */}
+          {!c.hidden('warning') && (
           <div className="rounded-card border border-amber-400/20 bg-amber-400/[0.04] p-4 text-sm">
             <div className="flex gap-2 text-amber-300">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <strong>Lưu ý quan trọng</strong>
+              <strong>{c.t('warn.title')}</strong>
             </div>
             <ul className="mt-2 space-y-1 text-muted">
-              <li>· Cần cài AI Desk trước khi dùng prompt</li>
-              <li>· Prompt không tự kết nối Extension</li>
-              <li>· Không bảo đảm hoạt động 100%</li>
-              <li>· Mỗi chat GPT mới cần nạp lại prompt</li>
+              {c.list('warn.items').map((item) => (
+                <li key={item}>· {item}</li>
+              ))}
             </ul>
           </div>
+          )}
 
           {/* Links */}
           <div className="space-y-2">
             <a href="/install" className="btn-primary w-full">
-              Hướng dẫn cài đặt
+              {c.t('btn.install')}
             </a>
             <a href="/tutorials" className="btn-secondary-dark w-full">
-              Video hướng dẫn
+              {c.t('btn.videos')}
             </a>
           </div>
         </aside>

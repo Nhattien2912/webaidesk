@@ -1,7 +1,7 @@
-// Direct download of the AI Desk 0.2 Beta RAR from the public R2 bucket (r2.dev).
+// Website-only download metadata verified against the public R2 endpoint.
 // This deliberately bypasses the release-manifest gates (published/approved/signed) at the owner's
 // request; the manifest pipeline (releaseManifest.ts, /api/releases/latest) is unchanged and unused
-// while DIRECT_DOWNLOAD is set. Values verified against R2 on 2026-10-18 (size, ETag, SHA-256).
+// while DIRECT_DOWNLOAD is set. This file does not feed the desktop auto-updater.
 
 import type { DownloadState } from './releaseManifest'
 
@@ -11,15 +11,19 @@ export interface DirectRelease {
   sizeBytes: number
   sha256: string
   url: string
+  available: boolean
+  verifiedAt: string
 }
 
 export const DIRECT_DOWNLOAD: DirectRelease = Object.freeze({
-  versionLabel: '0.2 Beta',
+  versionLabel: '0.3.0',
   /** Object key in aidesk-releases. */
-  fileName: 'BoCaiDatAIDesk 0.2Beta.rar',
-  sizeBytes: 120_193_516,
-  sha256: 'f482fc4510ae80dbabe09a9665f012b110fbb6cf0d1e18a4e4ccd8153f8681b1',
-  url: 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/BoCaiDatAIDesk%200.2Beta.rar',
+  fileName: 'BoCaiDatAIDesk 0.3 Beta.rar',
+  sizeBytes: 120_629_335,
+  sha256: '666eb793899160acaf40d7961fc2fb4544836b22f24a4b95abbee790af4dac03',
+  url: 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/BoCaiDatAIDesk%200.3%20Beta.rar',
+  available: true,
+  verifiedAt: '2026-10-21T05:40:02.109Z',
 })
 
 /** Manifest-driven states plus the direct R2 download. */

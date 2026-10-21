@@ -1,0 +1,228 @@
+{
+  "page": "install",
+  "path": "/install",
+  "title": "Hướng dẫn cài đặt AI Desk",
+  "hidden": [],
+  "values": {
+    "hero.eyebrow": "Bắt đầu sử dụng",
+    "hero.title": "Hướng dẫn cài đặt AI Desk",
+    "hero.intro": "Hướng dẫn từng bước từ tải AI Desk đến thực hiện tác vụ đầu tiên với GPT Manager và worker. Không cần kiến thức lập trình.",
+    "hero.notice": "Hiện có gói RAR 0.3.0 Beta cho Windows x64, chưa ký số. Hãy đọc cảnh báo và đối chiếu SHA-256 trên trang Download trước khi mở tệp.",
+    "toc.title": "Mục lục",
+    "toc.1": "1. Chuẩn bị",
+    "toc.2": "2. Tải AI Desk",
+    "toc.3": "3. Cài AI Desk Desktop",
+    "toc.4": "4. Cài Extension",
+    "toc.5": "5. Kết nối GPT Web",
+    "toc.6": "6. Thiết lập Worker",
+    "toc.7": "7. Nạp Prompt Manager",
+    "toc.8": "8. Tác vụ đầu tiên",
+    "toc.9": "9. Xử lý sự cố",
+    "s1.title": "Chuẩn bị",
+    "s1.subtitle": "Những thứ cần có trước khi bắt đầu",
+    "s1.reqTitle": "Yêu cầu hệ thống",
+    "s1.reqs": [
+      "Windows 10 (64-bit) trở lên",
+      "Trình duyệt Chrome hoặc Brave (để dùng GPT Bridge Extension)",
+      "Kết nối internet ổn định",
+      "Đủ RAM để chạy AI Desk Desktop cùng các ứng dụng AI worker"
+    ],
+    "s1.appsTitle": "Ứng dụng AI cần có",
+    "s1.appsIntro": "AI Desk điều phối các ứng dụng AI đã cài sẵn trên máy. Bạn cần ít nhất một trong những ứng dụng sau:",
+    "s1.apps": [
+      {
+        "name": "Codex (GitHub Copilot / VS Code)",
+        "status": "Hỗ trợ trong RC1",
+        "tone": "emerald"
+      },
+      {
+        "name": "Claude Code (Anthropic)",
+        "status": "Hỗ trợ trong RC1",
+        "tone": "emerald"
+      },
+      {
+        "name": "Antigravity IDE",
+        "status": "Đang thử nghiệm",
+        "tone": "amber"
+      },
+      {
+        "name": "ChatGPT Web (Manager)",
+        "status": "Bắt buộc",
+        "tone": "accent"
+      }
+    ],
+    "s1.bridgeTitle": "Điều kiện sử dụng GPT Bridge",
+    "s1.bridgeReqs": [
+      "Tài khoản ChatGPT (miễn phí hoặc Plus)",
+      "Trình duyệt Chrome hoặc Brave phiên bản mới nhất",
+      "Cho phép extension có quyền đọc trang ChatGPT Web"
+    ],
+    "s1.extra": "",
+    "s2.title": "Tải AI Desk",
+    "s2.subtitle": "Lấy bản cài đặt từ kênh chính thức",
+    "s2.intro": "AI Desk được phân phối qua trang web chính thức. Không tải từ nguồn khác để đảm bảo bảo mật.",
+    "s2.warnLead": "Gói hiện tại chưa ký số.",
+    "s2.warnText": "Chỉ dùng liên kết trên trang Download, đối chiếu đúng tên tệp, dung lượng và SHA-256 được công bố. Không tắt antivirus hoặc bỏ qua cảnh báo để ép chạy tệp.",
+    "s2.pkgTitle": "Gói đang được công bố",
+    "s2.pkgBadge": "0.3.0 Beta",
+    "s2.pkgName": "Gói Windows x64 (.rar)",
+    "s2.pkgDesc": "Đây là gói RAR chưa ký số. Danh tính tệp, dung lượng và SHA-256 được hiển thị trên trang Download để người dùng tự đối chiếu.",
+    "s2.button": "Đến trang tải xuống",
+    "s2.extra": "",
+    "s3.title": "Cài AI Desk Desktop",
+    "s3.subtitle": "Xác minh gói hiện có trước khi mở",
+    "s3.info": "Website mới chỉ xác minh danh tính gói tải 0.3.0 Beta ở mức tên tệp, dung lượng và SHA-256. Quy trình bên trong gói RAR chưa được xác minh độc lập trong task này.",
+    "s3.listTitle": "Gói 0.3.0 Beta cho Windows x64 (.rar)",
+    "s3.steps": [
+      "Tải gói .rar bằng nút duy nhất trên trang /download.",
+      "Đối chiếu tên tệp, dung lượng và SHA-256 với giá trị công bố trên trang đó.",
+      "Quét tệp bằng Windows Security hoặc công cụ bảo mật bạn tin cậy.",
+      "Chỉ giải nén sau khi các bước xác minh hoàn tất; nếu có cảnh báo hoặc hash lệch, hãy dừng lại."
+    ],
+    "s3.warn": "Tên executable, hành vi installer và các bước sau khi giải nén chưa được xác minh từ artifact trong task này. Trang này không đoán các bước đó.",
+    "s3.dangerLead": "Quan trọng về bảo mật:",
+    "s3.danger": "Không tắt Windows Defender, không thêm ngoại lệ và không bỏ qua SmartScreen chỉ để chạy AI Desk. Gói hiện tại chưa ký số.",
+    "s3.extra": "",
+    "s4.title": "Cài GPT Bridge Extension",
+    "s4.subtitle": "Kết nối ChatGPT Web với AI Desk Desktop",
+    "s4.intro": "GPT Bridge Extension cho phép ChatGPT Web gửi và nhận tín hiệu từ AI Desk Desktop. Đây là cầu nối quan trọng trong hệ thống.",
+    "s4.warn": "Extension chưa có trên Chrome Web Store công khai. Bản phân phối đi kèm với AI Desk Desktop khi được phát hành. Không cài extension từ nguồn không chính thức.",
+    "s4.listTitle": "Cài thủ công (Developer Mode)",
+    "s4.listIntro": "Trong giai đoạn Alpha/Beta, extension được cài qua chế độ Developer của trình duyệt:",
+    "s4.steps": [
+      "Mở Chrome hoặc Brave. Vào địa chỉ: chrome://extensions/",
+      "Bật chế độ \"Developer mode\" ở góc trên phải.",
+      "Nhấn \"Load unpacked\" và chọn thư mục extension đi kèm AI Desk.",
+      "Extension sẽ xuất hiện trong danh sách. Xác nhận icon extension hiện trên thanh công cụ.",
+      "Ghim extension để dễ kiểm tra trạng thái kết nối."
+    ],
+    "s4.extra": "",
+    "s5.title": "Kết nối GPT Web",
+    "s5.subtitle": "Kiểm tra GPT Bridge đang hoạt động",
+    "s5.intro": "GPT Bridge là kênh giao tiếp giữa ChatGPT Web và AI Desk Desktop. Sau khi cài extension, cần xác nhận kết nối đang hoạt động.",
+    "s5.cardTitle": "Các trạng thái kết nối",
+    "s5.states": [
+      {
+        "state": "🟢 Đã kết nối",
+        "desc": "Extension đang giao tiếp được với AI Desk Desktop. Sẵn sàng nhận nhiệm vụ.",
+        "tone": "emerald"
+      },
+      {
+        "state": "🟡 Đang kết nối",
+        "desc": "Extension đang cố gắng kết nối. Chờ vài giây hoặc thử refresh trang.",
+        "tone": "amber"
+      },
+      {
+        "state": "🔴 Mất kết nối",
+        "desc": "AI Desk Desktop không chạy hoặc extension bị tắt. Kiểm tra lại AI Desk Desktop.",
+        "tone": "red"
+      }
+    ],
+    "s5.listTitle": "Kiểm tra kết nối",
+    "s5.steps": [
+      "Đảm bảo AI Desk Desktop đang chạy (icon trong system tray).",
+      "Mở ChatGPT Web trong Chrome/Brave.",
+      "Nhìn vào icon extension trên thanh công cụ — màu xanh là đã kết nối.",
+      "Thử hover vào icon để xem trạng thái chi tiết."
+    ],
+    "s5.extra": "",
+    "s6.title": "Thiết lập Worker",
+    "s6.subtitle": "Gán phiên cho từng AI worker",
+    "s6.intro": "Mỗi worker cần được gán với một phiên cụ thể (cửa sổ ứng dụng đang mở). AI Desk sẽ kiểm tra phiên này trước mỗi lần giao việc.",
+    "s6.workers": [
+      {
+        "name": "Codex",
+        "status": "Hỗ trợ RC1",
+        "tone": "emerald",
+        "steps": "Mở ứng dụng Codex trên Windows.\nTrong AI Desk Desktop, vào mục Workers → Codex.\nNhấn \"Gán phiên\" và chọn cửa sổ Codex đang mở.\nXác nhận phiên đã được gán — trạng thái chuyển sang màu xanh."
+      },
+      {
+        "name": "Claude Code",
+        "status": "Hỗ trợ RC1",
+        "tone": "emerald",
+        "steps": "Mở Claude Code trên Windows.\nTrong AI Desk Desktop, vào mục Workers → Claude Code.\nNhấn \"Gán phiên\" và chọn cửa sổ Claude Code đang mở.\nKiểm tra trạng thái kết nối."
+      },
+      {
+        "name": "Antigravity IDE",
+        "status": "Đang thử nghiệm",
+        "tone": "amber",
+        "steps": "Adapter đang thử nghiệm. Theo dõi changelog để biết khi nào được hỗ trợ chính thức."
+      }
+    ],
+    "s6.extra": "",
+    "s7.title": "Nạp Prompt Manager",
+    "s7.subtitle": "Gửi prompt khởi tạo vào ChatGPT Web",
+    "s7.intro": "Thư viện Prompt hiện chỉ công bố mẫu action có schema được đối chiếu với source. Đây không phải bộ quy tắc Manager hoàn chỉnh và chưa được xác minh với artifact 0.3.0 Beta.",
+    "s7.steps": [
+      "Vào trang Thư viện Prompt và đọc phạm vi xác minh của từng mẫu.",
+      "Nhấn nút \"Sao chép\" trên mẫu muốn dùng.",
+      "Mở ChatGPT Web, bắt đầu cuộc trò chuyện mới.",
+      "Dán prompt vào ô nhập tin nhắn và gửi.",
+      "Kiểm tra JSON tạo ra trước khi để AI Desk tiếp nhận action."
+    ],
+    "s7.info": "Không có prompt Resume Session hay protocol quản lý session nào được công bố ở đây khi chưa có nguồn xác minh tương ứng.",
+    "s7.button": "Mở Thư viện Prompt",
+    "s7.extra": "",
+    "s8.title": "Chạy tác vụ đầu tiên",
+    "s8.subtitle": "Kiểm tra toàn bộ hệ thống hoạt động",
+    "s8.intro": "Sau khi đã thiết lập xong, thử một nhiệm vụ đơn giản để xác nhận mọi thứ kết nối đúng.",
+    "s8.cardTitle": "Ví dụ nhiệm vụ kiểm tra",
+    "s8.cardIntro": "Nói với GPT Manager (sau khi đã nạp prompt):",
+    "s8.code": "Hãy dùng Codex để viết một hàm Python tính giai thừa của một số nguyên dương.",
+    "s8.listTitle": "Vòng đời thực thi",
+    "s8.steps": [
+      "GPT Manager nhận yêu cầu, tạo requestId và giao việc cho Codex.",
+      "AI Desk Desktop nhận lệnh từ GPT Bridge và chuyển vào cửa sổ Codex.",
+      "Codex thực hiện nhiệm vụ (viết code).",
+      "Kết quả được thu lại và gửi về ChatGPT Web.",
+      "GPT Manager hiển thị kết quả và hỏi bạn có muốn tiếp tục không."
+    ],
+    "s8.info": "Trong giai đoạn Alpha, một số bước có thể cần sao chép thủ công giữa các cửa sổ. Đây là giới hạn đã biết — tự động hoàn toàn đang được phát triển.",
+    "s8.extra": "",
+    "s9.title": "Xử lý sự cố",
+    "s9.subtitle": "Giải pháp cho các vấn đề thường gặp",
+    "s9.faqs": [
+      {
+        "q": "Extension không kết nối với AI Desk Desktop",
+        "a": "Kiểm tra AI Desk Desktop đang chạy (icon trong system tray). Đảm bảo extension được bật trong trình duyệt. Thử refresh trang ChatGPT Web và kiểm tra lại trạng thái extension."
+      },
+      {
+        "q": "Worker không phản hồi sau khi gửi yêu cầu",
+        "a": "Kiểm tra cửa sổ worker (Codex/Claude Code) đang mở và ở đúng phiên đã gán. Xem tab Monitor trong AI Desk Desktop để biết yêu cầu đã được nhận chưa. Nếu worker đang bận, chờ thêm hoặc tắt và mở lại phiên worker."
+      },
+      {
+        "q": "Sai phiên chat — yêu cầu gửi vào cuộc trò chuyện khác",
+        "a": "Đây là Session Binding đang hoạt động. AI Desk phát hiện phiên worker không khớp và dừng lại. Vào AI Desk Desktop, vào phần cài đặt Worker, chọn đúng phiên ChatGPT/Claude Code đang mở, sau đó thử lại."
+      },
+      {
+        "q": "Không nhận được kết quả từ worker",
+        "a": "Kiểm tra Result Store trong AI Desk Desktop (tính năng đang phát triển). Trong giai đoạn Alpha, một số bước cần sao chép kết quả thủ công từ cửa sổ worker về ChatGPT Web."
+      },
+      {
+        "q": "Lỗi quyền truy cập hoặc antivirus chặn AI Desk",
+        "a": "Không tắt antivirus và không thêm ngoại lệ chỉ để chạy ứng dụng. Dừng lại, đối chiếu SHA-256 với trang Download và chỉ tiếp tục sau khi bạn đã xác minh đúng tệp từ kênh chính thức."
+      },
+      {
+        "q": "Hết quota ChatGPT hoặc worker",
+        "a": "Quota là giới hạn của nhà cung cấp dịch vụ, không phải AI Desk. Chờ quota reset hoặc nâng cấp plan của dịch vụ tương ứng. AI Desk không thể tăng quota cho bạn."
+      },
+      {
+        "q": "Lỗi tương thích sau khi Codex hoặc Claude cập nhật",
+        "a": "AI Desk điều khiển giao diện ứng dụng. Khi app cập nhật UI, adapter cần cập nhật theo. Kiểm tra changelog của AI Desk để biết phiên bản nào tương thích với phiên bản worker bạn đang dùng."
+      }
+    ],
+    "s9.infoBefore": "Không tìm thấy giải pháp? Xem",
+    "s9.link1": "video hướng dẫn",
+    "s9.infoMid": "hoặc theo dõi",
+    "s9.link2": "kênh cộng đồng",
+    "s9.infoAfter": "để được hỗ trợ.",
+    "s9.extra": "",
+    "sec.title": "Lưu ý về bảo mật",
+    "sec.before": "Control API trong source lắng nghe trên",
+    "sec.code": "127.0.0.1",
+    "sec.after": "và dùng token/scopes. Điều đó không có nghĩa toàn bộ ứng dụng không tạo kết nối mạng. Không chia sẻ token điều khiển hoặc thông tin phiên của bạn.",
+    "nav.prompts": "Thư viện Prompt",
+    "nav.videos": "Video hướng dẫn",
+    "nav.roadmap": "Lộ trình phát triển"
+  }
+}

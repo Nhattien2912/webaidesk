@@ -1,0 +1,17 @@
+import type { StudioItem } from '../data/studioFixtures'
+export class RepositoryError extends Error { readonly status:number;readonly code:string;readonly fields?:Record<string,string>;constructor(status:number,code:string,fields?:Record<string,string>){super(code);this.status=status;this.code=code;this.fields=fields} }
+export interface MediaItem {id:string;mime:string;bytes:number;width:number;height:number;altText:string;createdAt:number;url:string}
+export interface ContentRepository {list(type:StudioItem['type']):Promise<StudioItem[]>;save(input:StudioItem):Promise<StudioItem>;listMedia():Promise<MediaItem[]>;uploadMedia(file:File,altText:string):Promise<MediaItem>}
+type ApiItem={id:string;kind:StudioItem['type'];slug:string;title:string;summary:string;bodyMarkdown:string;tags:string[];seoTitle:string;metaDescription:string;status:StudioItem['status'];category:string;updatedAt:number;featured:boolean;version:number;data:Record<string,unknown>}
+export class ApiRepository implements ContentRepository {
+ private csrf='';private readonly base:string;constructor(base='/api/admin'){this.base=base}
+ private async session(){if(!this.csrf)this.csrf=(await this.read<{csrfToken:string}>(await fetch(`${this.base}/session`,{credentials:'same-origin'}))).csrfToken}
+ private async read<T>(r:Response){const b=await r.json() as {data?:T;error?:{code?:string;fieldErrors?:Record<string,string>}};if(!r.ok)throw new RepositoryError(r.status,b.error?.code??'request_failed',b.error?.fieldErrors);return b.data as T}
+ private resource(t:StudioItem['type']){return t==='video'?'videos':t==='article'?'articles':t==='guide'?'guides':t==='page'?'pages':'apps'}
+ private map(i:ApiItem,type?:StudioItem['type']):StudioItem{return{id:i.id,type:type??i.kind,slug:i.slug,title:i.title,summary:i.summary,bodyMarkdown:i.bodyMarkdown,tags:i.tags??[],seoTitle:i.seoTitle??'',metaDescription:i.metaDescription??'',status:i.status,category:i.category,updatedAt:new Date(i.updatedAt).toLocaleString('vi-VN'),featured:i.featured,version:i.version,data:i.data}}
+ async list(t:StudioItem['type']){return(await this.read<ApiItem[]>(await fetch(`${this.base}/${this.resource(t)}`,{credentials:'same-origin'}))).map(i=>this.map(i,t))}
+ async save(i:StudioItem){await this.session();const existing=Boolean(i.version);const payload={slug:i.slug,title:i.title,status:i.status,category:i.category,featured:i.featured,version:i.version,summary:i.summary??'',bodyMarkdown:i.bodyMarkdown??'',tags:i.tags??[],seoTitle:(i.seoTitle||i.title).slice(0,180),metaDescription:(i.metaDescription||i.summary||'').slice(0,300),data:i.data??{}};const r=await fetch(`${this.base}/${this.resource(i.type)}${existing?`/${i.id}`:''}`,{method:existing?'PATCH':'POST',credentials:'same-origin',headers:{'content-type':'application/json','x-csrf-token':this.csrf},body:JSON.stringify(payload)});return this.map(await this.read<ApiItem>(r),i.type)}
+ async listMedia(){return this.read<MediaItem[]>(await fetch(`${this.base}/media`,{credentials:'same-origin'}))}
+ async uploadMedia(file:File,altText:string){await this.session();return this.read<MediaItem>(await fetch(`${this.base}/media`,{method:'POST',credentials:'same-origin',headers:{'content-type':file.type,'x-alt-text':encodeURIComponent(altText),'x-csrf-token':this.csrf},body:file}))}
+}
+export const contentRepository:ContentRepository=new ApiRepository()

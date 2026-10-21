@@ -38,7 +38,7 @@ function loadScript(): Promise<void> {
   return scriptPromise
 }
 
-export const TurnstileWidget: React.FC<{ siteKey: string; onEvent: (event: CaptchaEvent) => void }> = ({ siteKey, onEvent }) => {
+export const TurnstileWidget: React.FC<{ siteKey: string; onEvent: (event: CaptchaEvent) => void; action?: string }> = ({ siteKey, onEvent, action = TURNSTILE_ACTION }) => {
   const ref = useRef<HTMLDivElement>(null)
   const onEventRef = useRef(onEvent)
 
@@ -54,7 +54,7 @@ export const TurnstileWidget: React.FC<{ siteKey: string; onEvent: (event: Captc
         if (cancelled || !ref.current || !window.turnstile) return
         widgetId = window.turnstile.render(ref.current, {
           sitekey: siteKey,
-          action: TURNSTILE_ACTION,
+          action,
           'refresh-expired': 'auto',
           callback: (token: string) => onEventRef.current({ type: 'token', token }),
           'expired-callback': () => onEventRef.current({ type: 'expired' }),
@@ -72,7 +72,7 @@ export const TurnstileWidget: React.FC<{ siteKey: string; onEvent: (event: Captc
       cancelled = true
       if (widgetId && window.turnstile) window.turnstile.remove(widgetId)
     }
-  }, [siteKey])
+  }, [siteKey, action])
 
   return <div ref={ref} className="min-h-[65px]" data-turnstile-widget="" />
 }

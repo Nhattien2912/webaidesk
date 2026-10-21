@@ -202,7 +202,7 @@ test('RAR cannot use the legacy unsigned development override', async () => {
 
 test('latest manifest selects the allowlisted RAR as the website primary', () => {
   const manifest = latestManifest([archiveEntry(), entry()], ORIGIN, {})
-  assert.equal(manifest?.version, '0.2.0-beta')
+  assert.equal(manifest?.version, '0.3.0')
   assert.equal(manifest?.files[0]?.kind, 'archive')
   assert.equal(manifest?.files[0]?.fileName, BETA_ARCHIVE_TARGET.fileName)
   assert.equal(validateReleaseManifest(manifest, { allowedHosts: ['webaidesk.pages.dev'], allowUnsigned: false }).ok, true)

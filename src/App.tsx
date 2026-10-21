@@ -23,6 +23,10 @@ import { ROUTE_TITLES, resolveRoute, type RouteId } from './lib/routes'
 import { useDownloadState } from './lib/useDownloadState'
 import { siteConfig } from './config/site'
 import { KnowledgePreview, TransparencySection, ValueStrip } from './components/HomepageExtras'
+import { AppsPage, ContentDetailPage } from './pages/PublicContentPages'
+import { BlogPage, ArticleDetailPage, GuidesPage, GuideDetailPage } from './pages/BlogPages'
+
+const AppDetailPage = () => <ContentDetailPage kind="app" />
 
 const HomePage: React.FC = () => {
   const download = useDownloadState()
@@ -54,6 +58,12 @@ const PAGES: Record<RouteId, React.FC> = {
   install: InstallPage,
   roadmap: RoadmapPage,
   prompts: PromptsPage,
+  blog: BlogPage,
+  'blog-detail': ArticleDetailPage,
+  guides: GuidesPage,
+  'guide-detail': GuideDetailPage,
+  apps: AppsPage,
+  'app-detail': AppDetailPage,
   'not-found': NotFoundPage,
 }
 
@@ -62,7 +72,8 @@ function currentPath(): string {
 }
 
 export const App: React.FC<{ path?: string }> = ({ path }) => {
-  const route = resolveRoute(path ?? currentPath())
+  const pathname = path ?? currentPath()
+  const route = resolveRoute(pathname)
   const Page = PAGES[route]
 
   useEffect(() => {

@@ -229,34 +229,47 @@ export const WhyAiDeskPage: React.FC = () => {
       <div className="container-content max-w-4xl space-y-20 py-16 sm:py-20">
         {/* A. Problem */}
         <section aria-labelledby="problem-title">
-          <p className="eyebrow">Vấn đề</p>
+          <p className="eyebrow">VẤN ĐỀ THỰC TẾ</p>
           <h2 id="problem-title" className="section-title mt-3">
-            AI Desk ra đời từ vấn đề gì?
+            Vì sao AI Desk ra đời?
           </h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="mt-6 max-w-3xl space-y-4 text-base leading-relaxed text-muted sm:text-lg">
+            <p>
+              Ngày nay, chúng ta có rất nhiều công cụ AI mạnh mẽ như ChatGPT, Codex hay Claude Code. Mỗi công cụ
+              đều có thế mạnh riêng và có thể hỗ trợ những công việc khác nhau.
+            </p>
+            <p>
+              Nhưng khi kết hợp nhiều AI trong cùng một dự án, tôi nhận ra một vấn đề:{' '}
+              <strong className="font-semibold text-ink">
+                Các công cụ rất giỏi xử lý nhiệm vụ, nhưng việc phối hợp giữa chúng vẫn phụ thuộc quá nhiều vào
+                người dùng.
+              </strong>
+            </p>
+          </div>
+          <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
             {[
               {
                 icon: Copy,
-                title: 'Chuyển cửa sổ liên tục',
-                body: 'Mỗi AI tool có cửa sổ riêng. Khi cần dùng nhiều tool cùng lúc, phải liên tục alt-tab và copy-paste giữa chúng.',
+                title: 'Chuyển đổi giữa nhiều ứng dụng',
+                body: 'Mỗi AI hoạt động trong một môi trường riêng. Người dùng phải liên tục chuyển cửa sổ, sao chép yêu cầu và mang kết quả từ công cụ này sang công cụ khác.',
               },
               {
                 icon: Layers,
-                title: 'Không có điều phối chung',
-                body: 'Không có nơi nào để xem toàn bộ quy trình đang diễn ra như thế nào — tool nào đang làm gì, kết quả ở đâu.',
+                title: 'Thiếu một trung tâm điều phối',
+                body: 'Khi sử dụng nhiều AI cùng lúc, việc phân chia nhiệm vụ và phối hợp các công cụ chưa có một quy trình thống nhất. Người dùng phải tự quyết định bước tiếp theo và thực hiện việc chuyển giao.',
               },
               {
                 icon: Clock,
-                title: 'Theo dõi tiến độ thủ công',
-                body: 'Phải tự nhớ nhiệm vụ nào đã giao, cho ai, và đã nhận kết quả chưa. Không có hệ thống xác minh tự động.',
+                title: 'Khó theo dõi tiến độ công việc',
+                body: 'Khi nhiều nhiệm vụ được thực hiện liên tiếp hoặc song song, việc xác định AI nào đang xử lý, nhiệm vụ nào đã hoàn thành và kết quả thuộc về yêu cầu nào trở nên phức tạp.',
               },
               {
                 icon: Zap,
-                title: 'Ngắt quãng quy trình',
-                body: 'Khi kết quả từ một AI cần làm đầu vào cho AI khác, quá trình chuyển giao thủ công làm mất tập trung và dễ gây lỗi.',
+                title: 'Quy trình làm việc dễ bị gián đoạn',
+                body: 'Kết quả từ một AI thường là đầu vào cho AI khác. Nếu quá trình chuyển giao bị thiếu thông tin, nhầm phiên hoặc mất ngữ cảnh, toàn bộ quy trình có thể phải thực hiện lại.',
               },
             ].map(({ icon: Icon, title, body }) => (
-              <div key={title} className="card p-5">
+              <div key={title} className="card flex h-full flex-col p-5 sm:p-6">
                 <div className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-line bg-navy-900 text-accent-light">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </div>
@@ -265,10 +278,21 @@ export const WhyAiDeskPage: React.FC = () => {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-muted">
-            AI Desk không giải quyết tất cả những vấn đề này hoàn toàn — đặc biệt ở giai đoạn Alpha. Nhưng đó là
-            hướng tôi đang xây dựng: một lớp điều phối giúp việc dùng nhiều AI cùng lúc bớt mệt mỏi hơn.
-          </p>
+          <div className="mt-8 border-l-2 border-accent/50 pl-5 sm:pl-6">
+            <h3 className="text-lg font-semibold text-ink">Và đó là lý do tôi bắt đầu xây dựng AI Desk.</h3>
+            <p className="mt-3 leading-relaxed text-muted">
+              Thay vì phát triển thêm một mô hình AI, tôi muốn tạo ra{' '}
+              <strong className="font-semibold text-ink">một lớp điều phối kết nối những công cụ AI đã có</strong>,
+              giúp phân chia nhiệm vụ, theo dõi quá trình thực hiện và đưa kết quả trở lại đúng nơi cần xử lý.
+            </p>
+            <p className="mt-3 leading-relaxed text-muted">
+              AI Desk vẫn đang trong quá trình hoàn thiện. Nhưng mục tiêu của tôi rất rõ ràng:
+            </p>
+            <p className="mt-3 text-lg font-semibold leading-relaxed text-ink">
+              Để người dùng tập trung vào công việc cần giải quyết, thay vì phải liên tục làm người trung gian giữa
+              các AI.
+            </p>
+          </div>
         </section>
 
         {/* B. Why GPT Web as Manager */}

@@ -19,7 +19,7 @@ export interface PublicAlphaRelease {
  */
 export const publicAlphaRelease: PublicAlphaRelease = {
   product: 'AI Desk',
-  version: '0.2.0',
+  version: '0.3.0',
   channel: 'Public Alpha',
   platform: 'Windows x64',
   metadataCommit: '39a0b38f151b919f2e40ec04a157830ea5a8a716',
@@ -43,22 +43,22 @@ export const publicAlphaRelease: PublicAlphaRelease = {
     'Quyền cài ứng dụng cho tài khoản Windows hiện tại; không cần quyền Administrator.',
   ],
   onboardingSteps: [
-    'Tải bộ cài đã ký từ trang này sau khi trạng thái chuyển sang Sẵn sàng.',
-    'Đối chiếu chữ ký số và SHA-256 được công bố trước khi chạy tệp.',
-    'Cài AI Desk theo người dùng và mở ứng dụng lần đầu.',
+    'Tải duy nhất gói RAR 0.3.0 Beta cho Windows x64 từ trang Download.',
+    'Đối chiếu SHA-256 được công bố trước khi giải nén; gói và executable bên trong chưa được ký số.',
+    'Giải nén vào thư mục riêng, đọc hướng dẫn đi kèm rồi mở ứng dụng theo cảnh báo an toàn.',
     'Chạy thiết lập GPT Bridge trong AI Desk, rồi Load unpacked thư mục extension trong Chrome hoặc Brave.',
     'Liên kết đúng cuộc trò chuyện GPT Manager và cửa sổ worker trước khi dùng luồng Assisted.',
   ],
   releaseNotes: [
     'Public Alpha tập trung vào luồng Manual/Assisted trên Windows.',
-    'Các helper đóng gói phải khớp hash đã ghim và nhà phát hành Authenticode được duyệt.',
+    'Gói tải phải khớp tên tệp, dung lượng và SHA-256 đã công bố; chưa có bảo chứng Authenticode.',
     'Thiết lập không an toàn đã lưu trước đó không thể bật lại tính năng Autonomous trong profile Public Alpha.',
     'Tunnel client, source maps, compiler source và công cụ debug không thuộc gói phát hành.',
   ],
   knownLimitations: [
     'WinHelper đang chờ hoàn tất đánh giá bảo mật; chưa có binary được phép đóng gói.',
     'GPT Bridge native host hiện chưa có chữ ký phát hành công khai.',
-    'Bản cài Windows và kiểm thử E2E đóng gói chưa hoàn tất.',
+    'Gói RAR 0.3.0 Beta chưa được ký số hoặc chứng nhận bảo mật độc lập.',
     'Extension Chrome/Brave cần bước Load unpacked thủ công trong giai đoạn Alpha.',
   ],
 }

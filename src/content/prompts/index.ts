@@ -61,7 +61,7 @@ export const prompts: PromptMeta[] = [
     workers: ['Codex', 'Claude Code', 'OpenCode', 'Antigravity', 'Auto'],
     aiDeskVersion: 'Source hiện tại',
     status: 'verified',
-    statusNote: 'Schema được đối chiếu với src/shared/managerAction.ts. Khả năng hoạt động trong gói 0.2 Beta chưa được xác minh độc lập.',
+    statusNote: 'Schema được đối chiếu với src/shared/managerAction.ts. Khả năng hoạt động trong gói 0.3.0 Beta chưa được xác minh độc lập.',
     updatedAt: '2026-10-18',
     content: ACTION_RULES,
   },

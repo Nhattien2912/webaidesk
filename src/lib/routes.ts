@@ -11,6 +11,12 @@ export type RouteId =
   | 'install'
   | 'roadmap'
   | 'prompts'
+  | 'blog'
+  | 'blog-detail'
+  | 'guides'
+  | 'guide-detail'
+  | 'apps'
+  | 'app-detail'
   | 'not-found'
 
 const ROUTES: Record<string, RouteId> = {
@@ -25,6 +31,9 @@ const ROUTES: Record<string, RouteId> = {
   '/install': 'install',
   '/roadmap': 'roadmap',
   '/prompts': 'prompts',
+  '/blog': 'blog',
+  '/guides': 'guides',
+  '/apps': 'apps',
 }
 
 export const ROUTE_TITLES: Record<RouteId, string> = {
@@ -38,10 +47,19 @@ export const ROUTE_TITLES: Record<RouteId, string> = {
   install: 'Hướng dẫn cài đặt — AI Desk',
   roadmap: 'Lộ trình phát triển — AI Desk',
   prompts: 'Thư viện Prompt — AI Desk',
+  blog: 'Blog công nghệ — AI Desk',
+  'blog-detail': 'Bài viết — AI Desk',
+  guides: 'Trung tâm hướng dẫn — AI Desk',
+  'guide-detail': 'Hướng dẫn — AI Desk',
+  apps: 'Ứng dụng — AI Desk',
+  'app-detail': 'Sản phẩm — AI Desk',
   'not-found': 'Không tìm thấy trang — AI Desk',
 }
 
 export function resolveRoute(pathname: string): RouteId {
   const clean = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  if (clean.startsWith('/blog/')) return 'blog-detail'
+  if (clean.toLowerCase().startsWith('/guides/')) return 'guide-detail'
+  if (clean.startsWith('/apps/')) return 'app-detail'
   return ROUTES[clean.toLowerCase()] ?? 'not-found'
 }

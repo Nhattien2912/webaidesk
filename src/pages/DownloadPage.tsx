@@ -62,9 +62,9 @@ const DirectDownloadCard: React.FC<{ release: DirectRelease }> = ({ release }) =
     <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
       <Download className="h-7 w-7" aria-hidden="true" />
     </span>
-    <p className="mt-4 text-sm font-medium text-amber-200">{release.versionLabel} · chưa ký số</p>
-    <p className="mt-1 text-sm text-muted">Windows x64 · {release.versionLabel}</p>
-    <a href={release.url} className="btn-primary mt-5 w-full" rel="noopener" data-direct-download="true">
+    <p className="mt-4 text-sm font-medium text-amber-200">Beta · chưa ký số</p>
+    <p className="mt-1 text-sm text-muted">Windows x64 · phiên bản {release.versionLabel} · RAR</p>
+    <a href={release.url} download={release.fileName} className="btn-primary mt-5 w-full" rel="noopener" data-direct-download="true">
       <Download className="h-4 w-4" aria-hidden="true" />
       Tải AI Desk cho Windows
     </a>
@@ -223,7 +223,11 @@ export const DownloadPage: React.FC = () => {
         </div>
 
         <section className="mt-6 card p-6 sm:p-8">
-          <h2 className="text-2xl font-semibold text-white">Bắt đầu sau khi bản tải được duyệt</h2>
+          <h2 className="text-2xl font-semibold text-white">Cài đặt gói RAR 0.3.0 Beta</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Tải tệp RAR, đối chiếu SHA-256, giải nén vào thư mục riêng rồi làm theo hướng dẫn đi kèm. Không bỏ qua
+            cảnh báo SmartScreen hoặc phần mềm bảo mật; executable bên trong chưa được ký số hay chứng nhận bảo mật độc lập.
+          </p>
           <ol className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {release.onboardingSteps.map((step, index) => (
               <li key={step} className="rounded-[12px] border border-line bg-navy-900 p-4 text-sm leading-relaxed text-muted">

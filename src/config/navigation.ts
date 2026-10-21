@@ -25,11 +25,14 @@ export const mainNav: NavItem[] = [
   {
     label: 'Hướng dẫn',
     children: [
+      { label: 'Trung tâm hướng dẫn', href: '/guides' },
       { label: 'Hướng dẫn cài đặt', href: '/install' },
       { label: 'Video hướng dẫn', href: '/tutorials' },
       { label: 'Thư viện Prompt', href: '/prompts' },
     ],
   },
+  { label: 'Blog', href: '/blog' },
+  { label: 'Ứng dụng', href: '/apps' },
   { label: 'Lộ trình', href: '/roadmap' },
   { label: 'Tải về', href: '/download' },
 ]
@@ -42,8 +45,11 @@ export const legalNav: NavItem[] = [
 
 export const resourcesNav: NavItem[] = [
   { label: 'Vì sao AI Desk?', href: '/why-ai-desk' },
+  { label: 'Trung tâm hướng dẫn', href: '/guides' },
   { label: 'Hướng dẫn cài đặt', href: '/install' },
   { label: 'Video hướng dẫn', href: '/tutorials' },
   { label: 'Thư viện Prompt', href: '/prompts' },
   { label: 'Lộ trình', href: '/roadmap' },
+  { label: 'Blog', href: '/blog' },
+  { label: 'Ứng dụng', href: '/apps' },
 ]

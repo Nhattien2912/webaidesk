@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-cms-local
 dist-ssr
 *.local
 
@@ -30,3 +31,15 @@ dist-ssr
 
 # Cloudflare local state
 .wrangler
+dist-public-local
+
+# Real Cloudflare deployment configs (identifiers) - use the *.example templates
+wrangler.private.jsonc
+wrangler.private.staging.jsonc
+wrangler.private.trial.jsonc
+wrangler.public.cms.jsonc
+
+# Build output and local artifacts
+dist-private
+dist-public
+artifacts/

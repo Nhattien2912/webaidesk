@@ -113,7 +113,7 @@ test('new routes render and navigation contains no fake hash links', async () =>
     ['/why-ai-desk', /Vì sao tôi xây dựng AI Desk/],
     ['/tutorials', /Video hướng dẫn AI Desk/],
     ['/install', /Hướng dẫn cài đặt AI Desk/],
-    ['/roadmap', /Lộ trình phát triển AI Desk/],
+    ['/roadmap', /AI Desk đang phát triển đến đâu\?/],
     ['/prompts', /Thư viện Prompt AI Desk/],
   ]
   for (const [path, heading] of expected) {
@@ -122,6 +122,54 @@ test('new routes render and navigation contains no fake hash links', async () =>
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1, `${path}: exactly one h1`)
     assert.ok(!html.includes('href="#"'), `${path}: fake hash link`)
   }
+})
+
+test('approved roadmap renders public Beta and starts with on-demand details collapsed', async () => {
+  const html = await page('/roadmap')
+  assert.match(html, /AI Desk Beta cho Windows/)
+  assert.match(html, /Đã phát hành Beta · Đang tiếp tục hoàn thiện/)
+  assert.ok(!html.includes('Đang chuẩn bị · Chưa công bố lịch phát hành'))
+  assert.ok(!html.includes('Result Store V2'))
+  assert.equal((html.match(/aria-label="Mở giai đoạn/g) ?? []).length, 4)
+  assert.match(html, /id="ecosystem-detail"[^>]*hidden/)
+  assert.match(html, /class="rm-feature-detail" hidden/)
+  assert.ok(!html.includes('aria-expanded="true"'))
+})
+
+test('homepage roadmap summarizes four phases and links to the full roadmap', async () => {
+  const Roadmap = await component('/src/components/Roadmap.tsx', 'Roadmap')
+  const html = render(h(Roadmap))
+  assert.match(html, /AI Desk đã đi đến đâu\?/)
+  assert.equal((html.match(/data-phase=/g) ?? []).length, 4)
+  assert.match(html, /Đã phát hành Beta · Đang tiếp tục hoàn thiện/)
+  assert.match(html, /Result Store V1/)
+  assert.match(html, /Hướng dẫn cài đặt/)
+  assert.match(html, /href="\/roadmap"[^>]*>Khám phá toàn bộ lộ trình/)
+  assert.ok(!/Chưa có bản công khai|Sắp tới|data-stage="released"|lg:grid-cols-3/.test(html))
+})
+
+test('FAQ renders nine accessible questions, real answer links and current Beta copy', async () => {
+  const FaqSection = await component('/src/components/FaqSection.tsx', 'FaqSection')
+  const html = render(h(FaqSection))
+  assert.equal((html.match(/aria-expanded=/g) ?? []).length, 9)
+  assert.equal((html.match(/aria-expanded="true"/g) ?? []).length, 1)
+  assert.match(html, /Tìm câu hỏi/)
+  assert.match(html, /role="status"/)
+  for (const href of ['/download', '/install', '/prompts', '/privacy']) assert.ok(html.includes(`href="${href}"`))
+  assert.match(html, /AI Desk 0\.3\.0 Beta là phiên bản công khai duy nhất/)
+  assert.match(html, /chưa được ký số hoặc chứng nhận bảo mật độc lập/)
+  assert.doesNotMatch(html, /sẽ mở tải khi|Hướng dẫn chi tiết sẽ được công bố|divide-line/)
+})
+
+test('Footer retains real community links without postponing contact until Beta', async () => {
+  const Footer = await component('/src/components/Footer.tsx', 'Footer')
+  const html = render(h(Footer))
+  assert.match(html, /Theo dõi AI Desk qua các kênh cộng đồng bên dưới/)
+  assert.match(html, /Beta Windows miễn phí/)
+  assert.match(html, /AI Desk Pro dự kiến trong tương lai/)
+  assert.ok(html.includes('href="https://www.youtube.com/@NhattienIT"'))
+  assert.ok(html.includes('href="https://www.facebook.com/profile.php?id=61595065515012"'))
+  assert.doesNotMatch(html, /Kênh liên hệ sẽ được công bố cùng bản Public Beta/)
 })
 
 test('internal page links resolve to known routes', async () => {
@@ -140,8 +188,8 @@ test('no outdated or unverified claims and no login, license or payment UI', asy
   }
 })
 
-const R2_URL = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/BoCaiDatAIDesk%200.2Beta.rar'
-const R2_SHA256 = 'f482fc4510ae80dbabe09a9665f012b110fbb6cf0d1e18a4e4ccd8153f8681b1'
+const R2_URL = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/BoCaiDatAIDesk%200.3%20Beta.rar'
+const R2_SHA256 = '666eb793899160acaf40d7961fc2fb4544836b22f24a4b95abbee790af4dac03'
 
 test('home download section links the primary button straight to the public R2 RAR', async () => {
   const html = await page('/')
@@ -151,9 +199,11 @@ test('home download section links the primary button straight to the public R2 R
   assert.ok(!/href="[^"]*\.exe/.test(html), 'no EXE link')
 })
 
-test('Public Alpha download page offers the direct 0.2 Beta download with its risk notice', async () => {
+test('download page advertises only the direct 0.3.0 Beta RAR', async () => {
   const html = await page('/download')
-  assert.match(html, /AI Desk 0\.2 Beta/)
+  assert.match(html, /AI Desk 0\.3\.0/)
+  assert.match(html, /Beta · chưa ký số/)
+  assert.doesNotMatch(html, /Phiên bản trước|0\.2 Beta|BoCaiDatAIDesk%200\.2|object R2 trả 404/)
   assert.match(html, /Windows x64/)
   assert.match(html, /data-release-gate="direct"/)
   assert.equal(html.split(`href="${R2_URL}"`).length - 1, 1)
@@ -425,11 +475,25 @@ test('product previews follow the real AI Desk UI and are labelled as illustrati
 })
 
 test('product showcase tabs expose tablist semantics', async () => {
-  const html = await page('/')
+  const Showcase = await component('/src/components/Showcase.tsx', 'Showcase')
+  const html = render(h(Showcase, {}))
   assert.match(html, /role="tablist"/)
   assert.equal((html.match(/role="tab"/g) ?? []).length, 2)
   assert.match(html, /role="tabpanel"/)
   assert.match(html, /aria-selected="true"/)
+})
+
+test('premium Features bento exposes truthful interactive demos', async () => {
+  const html = await page('/')
+  assert.match(html, /class="feature-bento-grid"/)
+  assert.match(html, /aria-label="Mô phỏng luồng điều phối"/)
+  assert.match(html, /Chạy demo luồng/)
+  assert.match(html, /Sự kiện mẫu — không phải log thật/)
+  assert.match(html, /Sai phiên/)
+  assert.match(html, /Khớp phiên — sẵn sàng gửi/)
+  assert.match(html, /Result Store/)
+  assert.match(html, /Đang phát triển/)
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 5, 'Showcase has 2 tabs and Result Store has 3 tabs')
 })
 
 test('official YouTube and Facebook links render in Community and Footer, opening in a new tab', async () => {
@@ -535,24 +599,24 @@ test('waitlist form with Turnstile: submit locked until solved, retry on failure
   assert.match(submitTag(expired), /disabled/)
 })
 
-test('direct R2 state: one primary button, 0.2 Beta facts and the unsigned/antivirus notice', async () => {
+test('direct R2 state: one primary button, 0.3.0 Beta facts and the unsigned/antivirus notice', async () => {
   const DownloadCard = await component<{ state: unknown }>('/src/components/DownloadSection.tsx', 'DownloadCard')
   const PublicAlphaDownloadCard = await component<{ state: unknown; fallbackVersion: string }>('/src/pages/DownloadPage.tsx', 'PublicAlphaDownloadCard')
   const { DIRECT_DOWNLOAD } = (await vite.ssrLoadModule('/src/lib/directDownload.ts')) as { DIRECT_DOWNLOAD: Record<string, unknown> }
   assert.equal(DIRECT_DOWNLOAD.url, R2_URL)
   assert.equal(DIRECT_DOWNLOAD.sha256, R2_SHA256)
-  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 120193516)
+  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 120629335)
   const state = { kind: 'direct', release: DIRECT_DOWNLOAD }
   for (const html of [render(h(DownloadCard, { state })), render(h(PublicAlphaDownloadCard, { state, fallbackVersion: '0.2.0' }))]) {
     assert.equal(html.match(/<a [^>]*href=/g)?.length, 1, 'exactly one link: the primary button')
     assert.ok(html.includes(`<a href="${R2_URL}"`))
     assert.match(html, /Tải AI Desk cho Windows/)
-    assert.match(html, /0\.2 Beta/)
-    assert.match(html, /120\.19 MB/)
+    assert.match(html, /0\.3 Beta/)
+    assert.match(html, /120\.63 MB/)
     assert.match(html, />RAR</)
     assert.match(html, /chưa ký số/)
     assert.match(html, /Kaspersky/)
     assert.match(html, /aria-label="Sao chép(?: mã)? SHA-256"/)
-    assert.ok(!/Alpha RC1|alpha-rc1|Đã phát hành/.test(html), 'labelled 0.2 Beta only, never as a signed release')
+    assert.ok(!/Alpha RC1|alpha-rc1|Đã phát hành/.test(html), 'labelled 0.3.0 Beta only, never as a signed release')
   }
 })

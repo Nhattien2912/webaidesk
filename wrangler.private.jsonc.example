@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aidesk-studio-private",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "dist-private",
+  "vars": {
+    "ENVIRONMENT": "production",
+    "CMS_ADMIN_ENABLED": "false",
+    "ACCESS_TEAM_DOMAIN": "<ACCESS_TEAM>.cloudflareaccess.com",
+    "ACCESS_AUDIENCE_MAP": "{\"aidesk-studio-private.pages.dev\":\"<ACCESS_AUD_TAG>\"}",
+    "ACCESS_ALLOWED_IDENTITIES": "<OWNER_EMAIL>",
+    "PRIVATE_ADMIN_HOSTNAMES": "aidesk-studio-private.pages.dev",
+    "CMS_ALLOWED_ORIGINS": "https://aidesk-studio-private.pages.dev"
+  }
+}

@@ -5,20 +5,38 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:public && npm run build:private && npm run build:functions && npm run security:check-v2.5",
+    "build:public": "vite build --config vite.public.config.ts",
+    "build:private": "vite build --config vite.private.config.ts && vite build --config vite.private-preview.config.ts",
+    "build:functions": "node scripts/build-v2-5-functions.mjs",
     "typecheck": "tsc -b",
-    "lint": "oxlint",
+    "lint": "oxlint --ignore-pattern \"artifacts/**\" --ignore-pattern \"dist-*/**\"",
     "test": "node --test \"tests/**/*.test.ts\"",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cms:dev": "node scripts/cms-local.mjs dev",
+    "cms:public:dev": "node scripts/cms-local.mjs public",
+    "cms:e2e:media": "node scripts/e2e-media-local.mjs",
+    "cms:drill:backup": "node scripts/backup-restore-drill-local.mjs",
+    "cms:migrate:local": "node scripts/cms-local.mjs migrate",
+    "cms:inspect:local": "node scripts/cms-local.mjs inspect",
+    "cms:test:local": "node --test tests/access-jwt.test.ts tests/comments-security.test.ts tests/cms-security.test.ts tests/studio-remediation.integration.test.ts",
+    "security:check-artifacts": "node scripts/verify-production-artifacts.mjs",
+    "security:check-v2.4": "node scripts/verify-v2-4-artifacts.mjs",
+    "security:check-v2.5": "node scripts/verify-v2-5-artifacts.mjs"
   },
   "dependencies": {
     "framer-motion": "^14.2.0",
+    "jose": "^6.2.12",
+    "linkify-it": "^6.1.0",
     "lucide-react": "^1.56.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
@@ -28,6 +46,7 @@
     "postcss": "^8.5.30",
     "tailwindcss": "^3.4.17",
     "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.0",
+    "wrangler": "^4.151.1"
   }
 }

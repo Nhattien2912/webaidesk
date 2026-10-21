@@ -1,0 +1,130 @@
+{
+  "page": "tutorials",
+  "path": "/tutorials",
+  "title": "Video hướng dẫn AI Desk",
+  "hidden": [],
+  "values": {
+    "hero.eyebrow": "Thư viện video",
+    "hero.title": "Video hướng dẫn AI Desk",
+    "hero.intro": "Học cách cài đặt và sử dụng AI Desk qua các video hướng dẫn từng bước. Video đang được chuẩn bị cùng với bản Public Beta.",
+    "notice.text": "Video đang được sản xuất — cập nhật khi có bản Beta",
+    "featured.title": "Video nổi bật",
+    "cat.allLabel": "Tất cả",
+    "cat.items": [
+      {
+        "id": "intro",
+        "label": "Giới thiệu"
+      },
+      {
+        "id": "setup",
+        "label": "Cài đặt"
+      },
+      {
+        "id": "workers",
+        "label": "Workers"
+      },
+      {
+        "id": "workflow",
+        "label": "Quy trình"
+      },
+      {
+        "id": "troubleshooting",
+        "label": "Khắc phục lỗi"
+      }
+    ],
+    "videos.items": [
+      {
+        "id": "intro-ai-desk",
+        "title": "Giới thiệu AI Desk",
+        "description": "Tổng quan về AI Desk: AI Desk là gì, giải quyết vấn đề gì và hoạt động như thế nào trong thực tế.",
+        "category": "intro",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "installation-guide",
+        "title": "Hướng dẫn cài đặt AI Desk",
+        "description": "Từng bước cài đặt AI Desk trên Windows: tải file, cài đặt, xác minh và khởi động lần đầu.",
+        "category": "setup",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "gpt-web-extension-setup",
+        "title": "Thiết lập GPT Web và Extension",
+        "description": "Cài GPT Bridge Extension, kết nối với ChatGPT Web và kiểm tra trạng thái kết nối lần đầu.",
+        "category": "setup",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "gpt-manager-usage",
+        "title": "Sử dụng GPT Manager",
+        "description": "Cách nạp prompt GPT Manager vào ChatGPT, phân tích nhiệm vụ và giao việc cho worker.",
+        "category": "workflow",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "connect-codex",
+        "title": "Kết nối Codex",
+        "description": "Thiết lập worker Codex trong AI Desk: gán phiên, kiểm tra quota và thực hiện nhiệm vụ đầu tiên.",
+        "category": "workers",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "connect-claude",
+        "title": "Kết nối Claude Code",
+        "description": "Thiết lập worker Claude Code: cách gán phiên, xác minh kết nối và gửi yêu cầu đầu tiên.",
+        "category": "workers",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "demo-real-workflow",
+        "title": "Demo quy trình thực tế",
+        "description": "Xem AI Desk trong thực tế: từ mô tả nhiệm vụ, phân công worker đến thu kết quả và nghiệm thu.",
+        "category": "workflow",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      },
+      {
+        "id": "troubleshooting-faq",
+        "title": "Khắc phục lỗi và FAQ",
+        "description": "Xử lý các vấn đề thường gặp: extension không kết nối, worker không phản hồi, sai phiên chat.",
+        "category": "troubleshooting",
+        "youtubeId": "",
+        "duration": "",
+        "publishedAt": "",
+        "status": "coming-soon",
+        "thumbnailMediaId": ""
+      }
+    ],
+    "coming.title": "Video đang được sản xuất",
+    "coming.text": "Các video hướng dẫn sẽ được ra mắt cùng bản Public Beta. Đăng ký để nhận thông báo khi có video mới.",
+    "coming.btn1": "Nhận thông báo",
+    "coming.btn2": "Xem hướng dẫn cài đặt"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "webaidesk-studio-security-test",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "staging",
+    "CMS_ADMIN_ENABLED": "true",
+    "ACCESS_TEAM_DOMAIN": "security-test.cloudflareaccess.com",
+    "ACCESS_AUD": "security-test-aud",
+    "ACCESS_ALLOWED_IDENTITIES": "owner@example.com",
+    "CMS_ALLOWED_ORIGINS": "https://security.test",
+    "CMS_CSRF_SECRET": "security-test-csrf-secret-32-characters",
+    "CMS_ALLOWED_IMAGE_HOSTS": "i.ytimg.com,good.example",
+    "CMS_ALLOWED_DOWNLOAD_HOSTS": "good.example",
+    "CMS_MEDIA_RETENTION_DAYS": "30"
+  },
+  "d1_databases": [{
+    "binding": "CMS_DB",
+    "database_name": "aidesk-studio-security-test",
+    "database_id": "22222222-2222-2222-2222-222222222222",
+    "migrations_dir": "migrations"
+  }]
+}

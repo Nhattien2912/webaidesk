@@ -1,123 +1,63 @@
-import React, { useId, useState } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
+import React, { useId, useRef, useState } from 'react'
+import { Minus, Plus, Search, X } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import type { FaqItem } from '../types'
+import { FAQS, searchFaqs, type FaqEntry } from '../data/faq'
+import './faq.css'
 
-const FAQS: FaqItem[] = [
-  {
-    category: 'Tổng quan',
-    question: 'AI Desk là gì?',
-    answer:
-      'AI Desk là ứng dụng Windows điều phối nhiều công cụ AI lập trình. GPT Manager (ChatGPT web) lập kế hoạch và giao việc; AI Desk chuyển yêu cầu tới worker như Codex hoặc Claude Code trên máy bạn, rồi đưa kết quả về GPT Manager.',
-  },
-  {
-    category: 'Bản quyền & Chi phí',
-    question: 'Có cần tài khoản không?',
-    answer:
-      'Không cần tài khoản AI Desk. Bạn vẫn cần tài khoản hợp lệ của các dịch vụ muốn dùng (ví dụ ChatGPT, Codex, Claude). AI Desk không bán lại tài khoản hay hạn mức của bên thứ ba.',
-  },
-  {
-    category: 'Bản quyền & Chi phí',
-    question: 'AI Desk có mất phí không?',
-    answer:
-      'AI Desk sẽ miễn phí trong giai đoạn Public Beta. AI Desk Pro là phiên bản trả phí dự kiến ra mắt sau đó; giá và thời điểm chưa được chốt.',
-  },
-  {
-    category: 'Tổng quan',
-    question: 'Khi nào tôi tải được AI Desk?',
-    answer:
-      'Bản Public Beta sẽ mở tải khi bộ cài đã được ký số và kiểm tra. Hiện chưa có ngày cụ thể; bạn có thể đăng ký nhận tin ở mục Cộng đồng.',
-  },
-  {
-    category: 'Tổng quan',
-    question: 'Thiết lập AI Desk gồm những bước nào?',
-    answer:
-      'Cài AI Desk, cài extension đồng hành cho trình duyệt và liên kết với cuộc trò chuyện ChatGPT dùng làm GPT Manager, rồi mở Codex hoặc Claude Code, chọn thư mục dự án và gắn phiên cho từng worker. Hướng dẫn chi tiết sẽ được công bố cùng bản Public Beta.',
-  },
-  {
-    category: 'Kỹ thuật',
-    question: 'AI Desk chạy trên hệ điều hành nào?',
-    answer: 'Hiện chỉ hỗ trợ Windows 10 và Windows 11 bản 64-bit. Chưa có kế hoạch cụ thể cho macOS hoặc Linux.',
-  },
-  {
-    category: 'Bảo mật',
-    question: 'Dữ liệu của tôi được xử lý thế nào?',
-    answer:
-      'Việc điều phối chạy trên máy của bạn. Nội dung bạn giao cho GPT Manager và worker được gửi tới các dịch vụ AI đó qua ứng dụng và tài khoản của chính bạn, theo chính sách của từng dịch vụ. Extension đồng hành chỉ hoạt động trên chatgpt.com. Một số kết nối mạng tùy chọn chỉ chạy khi bạn tự cấu hình. Xem thêm trang Quyền riêng tư.',
-  },
-  {
-    category: 'Kỹ thuật',
-    question: 'AI Desk có tự ý sửa mã nguồn của tôi không?',
-    answer:
-      'Thay đổi mã do worker bạn chọn thực hiện, không phải do AI Desk. Với các job Claude Code, AI Desk hỏi xác nhận trước khi cho phép sửa file trong dự án. Bạn nên dùng Git để xem lại mọi thay đổi.',
-  },
-  {
-    category: 'Bản quyền & Chi phí',
-    question: 'AI Desk có phải đối tác của OpenAI, Anthropic hay Google không?',
-    answer:
-      'Không. AI Desk là công cụ độc lập. Các tên ChatGPT, Codex, Claude, Antigravity thuộc về chủ sở hữu tương ứng.',
-  },
-]
+const AnswerParagraph: React.FC<{ text: string; links?: FaqEntry['links'] }> = ({ text, links }) => {
+  const parts: React.ReactNode[] = []
+  let offset = 0
+  const matches = (links ?? []).map((link) => ({ ...link, start: text.indexOf(link.text) }))
+    .filter((link) => link.start >= 0).sort((a, b) => a.start - b.start)
+  for (const link of matches) {
+    parts.push(text.slice(offset, link.start))
+    parts.push(<a key={link.href} href={link.href}>{link.text}</a>)
+    offset = link.start + link.text.length
+  }
+  parts.push(text.slice(offset))
+  return <p>{parts}</p>
+}
 
 export const FaqSection: React.FC = () => {
-  const [openQuestion, setOpenQuestion] = useState<string | null>(FAQS[0].question)
+  const [openQuestion, setOpenQuestion] = useState<string | null>(FAQS[0].id)
   const [query, setQuery] = useState('')
   const baseId = useId()
+  const searchRef = useRef<HTMLInputElement>(null)
+  const filtered = searchFaqs(query)
 
-  const needle = query.trim().toLowerCase()
-  const filtered = needle
-    ? FAQS.filter((faq) => `${faq.question} ${faq.answer}`.toLowerCase().includes(needle))
-    : FAQS
+  const clearSearch = () => {
+    setQuery('')
+    searchRef.current?.focus()
+  }
 
   return (
-    <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="section border-y border-white/[0.06] bg-navy-900">
-      <div className="container-content grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-        <div>
-          <p className="eyebrow">FAQ</p>
-          <h2 id="faq-title" className="section-title mt-3">
-            Câu hỏi thường gặp
-          </h2>
-          <p className="section-lead">Những điều cần biết trước khi cài AI Desk.</p>
-          <div className="relative mt-8">
-            <label htmlFor={`${baseId}-search`} className="sr-only">
-              Tìm câu hỏi
-            </label>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" aria-hidden="true" />
-            <input
-              id={`${baseId}-search`}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm câu hỏi (Windows, tài khoản, dữ liệu…)"
-              className="field pl-10"
-            />
+    <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="faq-v3">
+      <div className="container-content faq-v3-layout">
+        <div className="faq-v3-intro">
+          <p className="faq-v3-eyebrow">FAQ</p>
+          <h2 id="faq-title">Câu hỏi thường gặp</h2>
+          <p className="faq-v3-lead">Những điều cần biết về bản Beta, cách cài đặt và quyền sử dụng AI Desk.</p>
+          <div className="faq-v3-search">
+            <label htmlFor={`${baseId}-search`} className="sr-only">Tìm câu hỏi</label>
+            <Search className="faq-v3-search-icon" aria-hidden="true" />
+            <input ref={searchRef} id={`${baseId}-search`} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm câu hỏi: tài khoản, Windows…" aria-describedby={`${baseId}-search-hint`} />
+            {query && <button type="button" className="faq-v3-clear" onClick={clearSearch} aria-label="Xóa từ khóa tìm kiếm"><X aria-hidden="true" /></button>}
           </div>
+          <p id={`${baseId}-search-hint`} className="faq-v3-search-hint">Tìm theo câu hỏi hoặc nội dung trả lời, có dấu hoặc không dấu.</p>
+          <p className="faq-v3-result-count" role="status" aria-live="polite" aria-atomic="true">{query.trim() ? `${filtered.length} câu hỏi phù hợp` : `${FAQS.length} câu hỏi giúp bạn bắt đầu`}</p>
         </div>
 
-        <div className="card divide-y divide-line">
-          {filtered.length === 0 && <p className="p-5 text-sm text-muted">Không tìm thấy câu hỏi phù hợp.</p>}
-          {filtered.map((faq, index) => {
-            const open = openQuestion === faq.question
-            const panelId = `${baseId}-faq-${index}`
+        <div className="faq-v3-list">
+          {filtered.length === 0 && <div className="faq-v3-empty"><Search aria-hidden="true" /><h3>Không tìm thấy câu hỏi phù hợp.</h3><p>Thử từ khóa khác như “Beta”, “tài khoản” hoặc “dữ liệu”.</p><button type="button" onClick={clearSearch}>Xóa tìm kiếm</button></div>}
+          {filtered.map((faq) => {
+            const open = openQuestion === faq.id
+            const panelId = `${baseId}-faq-${faq.id}`
+            const triggerId = `${panelId}-trigger`
             return (
-              <div key={faq.question}>
-                <h3>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-medium text-ink hover:bg-white/[0.03]"
-                    aria-expanded={open}
-                    aria-controls={panelId}
-                    onClick={() => setOpenQuestion(open ? null : faq.question)}
-                  >
-                    {faq.question}
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-subtle transition-transform ${open ? 'rotate-180' : ''}`}
-                      aria-hidden="true"
-                    />
-                  </button>
-                </h3>
-                <div id={panelId} hidden={!open} className="px-5 pb-5 text-sm leading-relaxed text-muted">
-                  {faq.answer}
+              <div key={faq.id} className={`faq-v3-item ${open ? 'is-open' : ''}`}>
+                <h3><button type="button" id={triggerId} aria-expanded={open} aria-controls={panelId} onClick={() => setOpenQuestion(open ? null : faq.id)}><span>{faq.question}</span><span className="faq-v3-toggle-icon">{open ? <Minus aria-hidden="true" /> : <Plus aria-hidden="true" />}</span></button></h3>
+                <div id={panelId} role="region" aria-labelledby={triggerId} hidden={!open} className="faq-v3-answer">
+                  {faq.paragraphs.map((paragraph) => <AnswerParagraph key={paragraph} text={paragraph} links={faq.links} />)}
                 </div>
               </div>
             )

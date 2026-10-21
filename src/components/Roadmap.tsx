@@ -1,46 +1,49 @@
 import React from 'react'
-import { CheckCircle2, CircleDashed, Clock } from 'lucide-react'
+import { ArrowRight, Check, MonitorDown, Network, Orbit, Workflow, type LucideIcon } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import { roadmap, type RoadmapStage } from '../data/roadmap'
+import { homepageRoadmap } from '../data/homepageRoadmap'
+import type { RoadmapPhaseStage } from '../data/roadmapV2'
+import './homepage-roadmap.css'
 
-const STAGE_STYLE: Record<RoadmapStage, { icon: typeof CheckCircle2; className: string; ring: string }> = {
-  released: { icon: CheckCircle2, className: 'text-emerald-300', ring: 'border-t-emerald-400/60' },
-  'in-progress': { icon: Clock, className: 'text-accent-light', ring: 'border-t-accent/70' },
-  planned: { icon: CircleDashed, className: 'text-subtle', ring: 'border-t-white/20' },
+const ICONS: Record<RoadmapPhaseStage, LucideIcon> = {
+  internal: Network,
+  refining: Workflow,
+  beta: MonitorDown,
+  direction: Orbit,
 }
 
 export const Roadmap: React.FC = () => (
-  <section id={SECTION_IDS.roadmap} aria-labelledby="roadmap-title" className="section bg-navy">
+  <section id={SECTION_IDS.roadmap} aria-labelledby="roadmap-title" className="home-roadmap-v3">
     <div className="container-content">
-      <div className="max-w-3xl">
-        <p className="eyebrow">Roadmap</p>
-        <h2 id="roadmap-title" className="section-title mt-3">
-          Đã làm được gì, và tiếp theo là gì
-        </h2>
-        <p className="section-lead">Chỉ những gì đã có trong bản build thật mới nằm ở cột đầu tiên.</p>
+      <div className="home-roadmap-heading">
+        <p className="home-roadmap-eyebrow">LỘ TRÌNH PHÁT TRIỂN</p>
+        <h2 id="roadmap-title">AI Desk đã đi đến đâu?</h2>
+        <p>Từ nền tảng điều phối AI trên Windows đến hệ sinh thái đa AI, đa môi trường. Khám phá những gì đã được xây dựng, đang hoàn thiện và những định hướng tiếp theo.</p>
       </div>
 
-      <div className="mt-12 grid gap-4 lg:grid-cols-3">
-        {roadmap.map((column) => {
-          const { icon: Icon, className, ring } = STAGE_STYLE[column.stage]
+      <ol className="home-roadmap-track" aria-label="Bốn giai đoạn phát triển AI Desk">
+        {homepageRoadmap.map((phase) => {
+          const Icon = ICONS[phase.stage]
           return (
-            <div key={column.stage} className={`card border-t-2 p-6 ${ring}`} data-stage={column.stage}>
-              <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
-                <Icon className={`h-5 w-5 ${className}`} aria-hidden="true" />
-                {column.title}
-              </h3>
-              <p className="mt-2 text-sm text-subtle">{column.note}</p>
-              <ul className="mt-5 space-y-4">
-                {column.items.map((item) => (
-                  <li key={item.title} className="border-t border-line pt-4">
-                    <div className="font-medium text-ink">{item.title}</div>
-                    <p className="mt-1 text-sm leading-relaxed text-muted">{item.detail}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <li key={phase.id} className={`home-roadmap-phase home-roadmap-${phase.stage}`} data-phase={phase.id} data-stage={phase.stage}>
+              <div className="home-roadmap-milestone"><span>{phase.number}</span><span className="home-roadmap-milestone-label">GIAI ĐOẠN {phase.number}</span></div>
+              <article className="home-roadmap-card" aria-labelledby={`home-phase-${phase.id}`}>
+                <div className="home-roadmap-card-title"><span className="home-roadmap-icon"><Icon aria-hidden="true" /></span><h3 id={`home-phase-${phase.id}`}>{phase.title}</h3></div>
+                <p className="home-roadmap-status">{phase.status}</p>
+                <p className="home-roadmap-description">{phase.description}</p>
+                <ul className="home-roadmap-highlights">
+                  {phase.highlights.map((item) => <li key={item}><Check aria-hidden="true" /><span>{item}</span></li>)}
+                </ul>
+                {phase.note && <p className="home-roadmap-note">{phase.note}</p>}
+              </article>
+            </li>
           )
         })}
+      </ol>
+
+      <div className="home-roadmap-cta">
+        <p>Xem chi tiết từng giai đoạn và kế hoạch mở rộng AI Desk sang Web, Desktop, CLI, IDE, API và Local AI.</p>
+        <a href="/roadmap">Khám phá toàn bộ lộ trình<ArrowRight aria-hidden="true" /></a>
       </div>
     </div>
   </section>

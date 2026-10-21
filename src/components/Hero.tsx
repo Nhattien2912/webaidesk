@@ -35,7 +35,7 @@ export const Hero: React.FC<{ download: DownloadView }> = ({ download }) => {
           </div>
           <p className="mt-5 flex items-center gap-2 text-sm font-medium text-slate-600">
             <Sparkles className="h-4 w-4 text-blue-600" aria-hidden="true" />
-            Không cần tài khoản AI Desk · {available ? 'Bản 0.2 Beta cho Windows hiện có' : 'Bản tải công khai đang được chuẩn bị'}
+            Không cần tài khoản AI Desk · {available ? 'Bản 0.3.0 Beta cho Windows x64 hiện có' : 'Bản tải công khai đang được chuẩn bị'}
           </p>
         </div>
         <div className="relative z-10 min-w-0 lg:-mr-8 xl:-mr-[8vw]">

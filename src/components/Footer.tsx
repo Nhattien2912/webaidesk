@@ -67,7 +67,7 @@ export const Footer: React.FC = () => (
               {siteConfig.contactEmail}
             </a>
           ) : (
-            <p className="text-slate-500">Kênh liên hệ sẽ được công bố cùng bản Public Beta.</p>
+            <p className="text-slate-500">Theo dõi AI Desk qua các kênh cộng đồng bên dưới.</p>
           )}
           <SocialList tone="light" />
         </div>
@@ -76,7 +76,7 @@ export const Footer: React.FC = () => (
     <div className="border-t border-brand-border">
       <div className="container-content flex flex-col gap-2 py-5 text-xs text-slate-500 sm:flex-row sm:justify-between">
         <span>© {BUILD_YEAR} AI Desk.</span>
-        <span>Free Public Beta trước · AI Desk Pro sau</span>
+        <span>Beta Windows miễn phí · AI Desk Pro dự kiến trong tương lai</span>
       </div>
     </div>
   </footer>
