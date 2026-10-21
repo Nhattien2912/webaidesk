@@ -2,7 +2,7 @@ import type { CmsContent, ContentKind, ContentStatus, D1Like } from './types.ts'
 
 type Row = Record<string,unknown>
 const parseJson = <T>(value: unknown, fallback: T): T => { try { return JSON.parse(String(value)) as T } catch { return fallback } }
-const mapRow = (row: Row): CmsContent => ({
+export const mapRow = (row: Row): CmsContent => ({
   id:String(row.id), kind:row.kind as ContentKind, slug:String(row.slug), title:String(row.title), summary:String(row.summary), bodyMarkdown:String(row.body_markdown), category:String(row.category), tags:parseJson<string[]>(row.tags_json,[]), seoTitle:String(row.seo_title), metaDescription:String(row.meta_description), featured:Number(row.featured)===1, status:row.status as ContentStatus, data:parseJson<Record<string,unknown>>(row.data_json,{}), version:Number(row.version), createdAt:Number(row.created_at), updatedAt:Number(row.updated_at), publishedAt:row.published_at==null?null:Number(row.published_at), archivedAt:row.archived_at==null?null:Number(row.archived_at),
 })
 

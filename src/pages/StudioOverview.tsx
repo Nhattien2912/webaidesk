@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ExternalLink, Eye, FilePlus2, Pencil, Search } from "lucide-react";
+import { ExternalLink, Eye, FilePlus2, Pencil, Search, Trash2 } from "lucide-react";
 import type { StudioItem } from "../data/studioFixtures";
 import type { PageId } from "../content/pageContent";
 import {
@@ -36,6 +36,7 @@ export function ContentOverview({
   onEditItem,
   onOpenPage,
   onCreateDraft,
+  onDeleteItem,
 }: {
   items: StudioItem[];
   loading: boolean;
@@ -43,6 +44,7 @@ export function ContentOverview({
   onEditItem: (item: StudioItem) => void;
   onOpenPage: (pageId: PageId, mode: "edit" | "preview") => void;
   onCreateDraft: (pageId: PageId) => Promise<void>;
+  onDeleteItem: (item: StudioItem) => void;
 }) {
   const [filter, setFilter] = useState<OverviewFilter>(DEFAULT_FILTER);
   const [busy, setBusy] = useState<string | null>(null);
@@ -159,6 +161,9 @@ export function ContentOverview({
                 {row.item && row.type !== "page" && row.status !== "published" && (
                   <button onClick={() => onEditItem(row.item!)} aria-label={`Xem trước ${row.title}`}><Eye aria-hidden="true" /> Xem trước</button>
                 )}
+                {row.item && row.type !== "page" && row.item.version ? (
+                  <button className="danger-outline" onClick={() => onDeleteItem(row.item!)} aria-label={`Xóa bài ${row.title}`}><Trash2 aria-hidden="true" /> Xóa bài</button>
+                ) : null}
                 {row.publicUrl && (row.type === "code" || row.type === "page" || row.status === "published") && (
                   <a href={row.publicUrl} target="_blank" rel="noopener noreferrer" aria-label={`Mở ${row.title} trên website`}><ExternalLink aria-hidden="true" /> Trang công khai</a>
                 )}

@@ -28,6 +28,8 @@ import { MarkdownBody } from "../components/MarkdownBody";
 import { videoCategories } from "../data/tutorials";
 import { PageContentManager, type PageIntent } from "./StudioPageContent";
 import { ContentOverview } from "./StudioOverview";
+import { ConfirmDialog, TrashManager } from "./StudioTrash";
+import { describeTrashError, moveToTrash, type TrashType } from "../lib/trashApi";
 import { PAGES, defaultDoc, type PageId } from "../content/pageContent";
 import { MARKDOWN_SNIPPETS, buildAppData, buildGuideData, buildVideoData, describeSaveError, formatChangelog, insertAtCursor, joinList, mediaMarkdown, splitList } from "../lib/studioEditor";
 import { contentRepository, RepositoryError, type MediaItem } from "../lib/contentRepository";
@@ -42,6 +44,7 @@ type Section =
   | "apps"
   | "comments"
   | "media"
+  | "trash"
   | "settings";
 const nav: Array<{
   id: Section;
@@ -57,6 +60,7 @@ const nav: Array<{
   { id: "apps", label: "Ứng dụng", icon: Box },
   { id: "comments", label: "Bình luận", icon: MessageSquare },
   { id: "media", label: "Thư viện Media", icon: Image },
+  { id: "trash", label: "Thùng rác", icon: Trash2 },
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
 
@@ -114,10 +118,12 @@ function Dashboard({
   items,
   navigate,
   onEdit,
+  onDelete,
 }: {
   items: StudioItem[];
   navigate: (section: Section) => void;
   onEdit: (item: StudioItem) => void;
+  onDelete: (item: StudioItem) => void;
 }) {
   const counts = (type: StudioItem["type"]) =>
     items.filter((item) => item.type === type).length;
@@ -249,6 +255,7 @@ function Dashboard({
         title="Nội dung gần đây"
         items={[...items].filter((item) => item.status !== "archived").sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0)).slice(0, 8)}
         onEdit={onEdit}
+        onDelete={onDelete}
       />
     </>
   );
@@ -258,10 +265,12 @@ function ContentTable({
   title,
   items,
   onEdit,
+  onDelete,
 }: {
   title: string;
   items: StudioItem[];
   onEdit?: (item: StudioItem) => void;
+  onDelete?: (item: StudioItem) => void;
 }) {
   return (
     <section className="studio-card table-card">
@@ -305,6 +314,15 @@ function ContentTable({
                   >
                     Chỉnh sửa
                   </button>
+                  {onDelete && item.type !== "page" && item.version ? (
+                    <button
+                      className="row-delete"
+                      onClick={() => onDelete(item)}
+                      aria-label={`Xóa bài ${item.title}`}
+                    >
+                      <Trash2 aria-hidden="true" /> Xóa bài
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -320,11 +338,13 @@ function ListManager({
   items,
   onNew,
   onEdit,
+  onDelete,
 }: {
   section: "videos" | "articles" | "guides" | "apps";
   items: StudioItem[];
   onNew: () => void;
   onEdit: (item: StudioItem) => void;
+  onDelete: (item: StudioItem) => void;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -384,6 +404,7 @@ function ListManager({
             title={`${filtered.length} mục`}
             items={filtered}
             onEdit={onEdit}
+            onDelete={onDelete}
           />
         ) : (
           <div className="manager-empty">
@@ -402,11 +423,13 @@ function Editor({
   item,
   onBack,
   onSave,
+  onDelete,
 }: {
   type: StudioItem["type"];
   item?: StudioItem;
   onBack: () => void;
   onSave: (item: StudioItem) => Promise<StudioItem | null>;
+  onDelete: (item: StudioItem) => void;
 }) {
   const [persistedItem, setPersistedItem] = useState(item);
   const [title, setTitle] = useState(item?.title ?? "");
@@ -800,6 +823,15 @@ function Editor({
               Lưu trữ
             </button>
           </div>
+          {persistedItem?.version ? (
+            <div className="editor-danger-zone">
+              <h4>Xóa nội dung</h4>
+              <p>Chuyển vào Thùng rác: nội dung biến khỏi website ngay nhưng có thể khôi phục. Khác với “Lưu trữ”.</p>
+              <button type="button" className="danger-outline" onClick={() => onDelete(persistedItem)}>
+                <Trash2 aria-hidden="true" /> Xóa bài
+              </button>
+            </div>
+          ) : null}
         </aside>
       </div>
     </>
@@ -1012,6 +1044,9 @@ export const StudioPage: React.FC = () => {
     window.setTimeout(() => setNotice(""), 3200);
   }, []);
   const [pageIntent, setPageIntent] = useState<PageIntent | null>(null);
+  const [deleting, setDeleting] = useState<StudioItem | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [allState, setAllState] = useState<{ loading: boolean; error: string }>({ loading: true, error: "" });
   const refreshAll = useCallback(async () => {
     try {
@@ -1053,6 +1088,27 @@ export const StudioPage: React.FC = () => {
       openPage(pageId, "preview");
     } catch (error) {
       notify(error instanceof RepositoryError ? describeSaveError(error.status, error.code, error.fields) : "Lỗi mạng — chưa tạo được bản nháp.");
+    }
+  };
+  const requestDelete = (item: StudioItem) => {
+    if (item.type === "page" || !item.version) return;
+    setDeleteError("");
+    setDeleting(item);
+  };
+  const confirmDelete = async () => {
+    if (!deleting?.version) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      await moveToTrash(deleting.type as TrashType, deleting.id, deleting.version);
+      setItems((current) => current.filter((item) => item.id !== deleting.id));
+      setEditor(null);
+      setDeleting(null);
+      notify(`Đã chuyển "${deleting.title}" vào Thùng rác. Bạn có thể khôi phục trong mục Thùng rác.`);
+    } catch (error) {
+      setDeleteError(describeTrashError(error));
+    } finally {
+      setDeleteBusy(false);
     }
   };
   const navigate = (next: Section) => {
@@ -1205,9 +1261,10 @@ export const StudioPage: React.FC = () => {
               item={editor.item}
               onBack={() => setEditor(null)}
               onSave={save}
+              onDelete={requestDelete}
             />
           ) : section === "dashboard" ? (
-            <Dashboard items={filtered} navigate={navigate} onEdit={editItem} />
+            <Dashboard items={filtered} navigate={navigate} onEdit={editItem} onDelete={requestDelete} />
           ) : section === "videos" ||
             section === "articles" ||
             section === "guides" ||
@@ -1228,11 +1285,14 @@ export const StudioPage: React.FC = () => {
                 })
               }
               onEdit={(item) => setEditor({ type: item.type, item })}
+              onDelete={requestDelete}
             />
           ) : section === "all" ? (
-            <ContentOverview items={filtered} loading={allState.loading} loadError={allState.error} onEditItem={editItem} onOpenPage={openPage} onCreateDraft={createDraftFromDefault} />
+            <ContentOverview items={filtered} loading={allState.loading} loadError={allState.error} onEditItem={editItem} onOpenPage={openPage} onCreateDraft={createDraftFromDefault} onDeleteItem={requestDelete} />
           ) : section === "pages" ? (
             <PageContentManager notify={notify} intent={pageIntent} />
+          ) : section === "trash" ? (
+            <TrashManager notify={notify} onChanged={() => void refreshAll()} />
           ) : section === "comments" ? (
             <CommentsManager notify={notify} />
           ) : section === "media" ? (
@@ -1247,6 +1307,21 @@ export const StudioPage: React.FC = () => {
           )}
         </main>
       </div>
+      {deleting && (
+        <ConfirmDialog
+          title="Xóa bài này?"
+          danger
+          confirmLabel="Chuyển vào Thùng rác"
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => setDeleting(null)}
+        >
+          <p><b>{deleting.title}</b> sẽ được chuyển vào <b>Thùng rác</b>.</p>
+          <p>{deleting.status === "published" ? "Nội dung đang công khai và sẽ biến khỏi website ngay lập tức (trang chi tiết trả về 404). " : "Nội dung sẽ biến khỏi các danh sách. "}Bạn có thể khôi phục lại từ Thùng rác; khi khôi phục, nội dung quay về Bản nháp.</p>
+          <p>Ảnh trong Thư viện Media không bị xóa.</p>
+        </ConfirmDialog>
+      )}
       {notice && <Notice message={notice} />}
     </div>
   );

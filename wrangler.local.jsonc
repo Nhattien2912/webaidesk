@@ -11,6 +11,7 @@
     "ACCESS_AUD": "local-only",
     "ACCESS_ALLOWED_IDENTITIES": "local-owner@invalid.test",
     "CMS_ALLOWED_ORIGINS": "http://localhost:8787,http://127.0.0.1:8787,http://localhost:8793,http://127.0.0.1:8793",
+    "CMS_PERMANENT_DELETE_ENABLED": "true",
     "CMS_CSRF_SECRET": "local-only-csrf-boundary-32-characters-minimum",
     "COMMENTS_TURNSTILE_SECRET_KEY": "local-only-siteverify-boundary",
     "COMMENTS_TURNSTILE_ALLOWED_HOSTNAMES": "local.invalid",

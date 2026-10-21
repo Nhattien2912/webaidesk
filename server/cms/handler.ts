@@ -7,6 +7,7 @@ import { handleAdminComments } from './comments.ts'
 import { canTransition } from '../../src/lib/studio.ts'
 import { referencedMediaIds } from './validation.ts'
 import { legacyUrlAudit, mediaCleanupDryRun } from './retention.ts'
+import { handleTrash } from './trash.ts'
 
 export interface CmsDeps { verifyAccess?:VerifyAccess; now?:()=>number }
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; frame-ancestors 'none'",'referrer-policy':'no-referrer'}
@@ -42,6 +43,7 @@ export async function handleAdminContent(request:Request,env:CmsEnv,path:string[
     return row?serveMedia(row.storage_key,env):fail('not_found',404)
   }
   if(!env.CMS_DB)return fail('cms_not_configured',503)
+  if(path[0]==='trash'||(path[2]==='trash'&&request.method==='POST'))return handleTrash(request,env,path,auth.identity,deps.now?.()??Date.now())
   const repo=new D1CmsRepository(env.CMS_DB);const sectionName=path[0]==='guides'?'guide':path[0]==='pages'?'page':'blog';const sectioned=sectionName!=='blog';const kind=sectioned?'article':kindFrom(path[0]);if(!kind)return fail('not_found',404)
   const inSection=(item:CmsContent|null)=>!!item&&(kind!=='article'||sectionOf(item)===sectionName);const section=sectionName
   const forceSection=(body:unknown)=>sectioned&&body&&typeof body==='object'&&!Array.isArray(body)?{...(body as Record<string,unknown>),data:{...((body as {data?:Record<string,unknown>}).data&&typeof (body as {data?:unknown}).data==='object'?(body as {data:Record<string,unknown>}).data:{}),section:sectionName}}:body
