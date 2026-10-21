@@ -53,7 +53,7 @@ export function validateContent(input: unknown, kind: ContentKind, current?: Cms
       if(data.section!=null&&data.section!=='page')fields['data.section']='section_immutable'
       data.section='page'
       for(const key of GUIDE_ONLY_KEYS)if(key in data)fields['data.'+key]='guide_only'
-      if(!(PAGE_IDS as readonly string[]).includes(slug))fields.slug='page_slug_must_be_install_prompts_or_tutorials'
+      if(!(PAGE_IDS as readonly string[]).includes(slug))fields.slug='page_slug_must_be_a_registered_page'
       const pageData=data.page
       if(pageData!=null){
         if(typeof pageData!=='object'||Array.isArray(pageData))fields['data.page']='object_required'

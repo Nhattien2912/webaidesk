@@ -15,7 +15,7 @@ export async function onRequest({request,env}:Context):Promise<Response>{
   try{await verifyAccess(token,env,hostname)}catch{return denied('access_invalid',401)}
   const url=new URL(request.url)
   // The Studio's page preview is a second HTML entry, embedded by the Studio itself (same origin, behind Access).
-  const preview=/^\/admin\/preview\/(install|prompts|tutorials)\/?$/.test(url.pathname)
+  const preview=/^\/admin\/preview\/(install|prompts|tutorials|faq|changelog)\/?$/.test(url.pathname)
   if(preview){url.pathname='/preview';url.search=''}
   else if(!/\/[^/]+\.[a-z0-9]+$/i.test(url.pathname)){url.pathname='/';url.search=''}
   const response=await env.ASSETS.fetch(new Request(url,request))

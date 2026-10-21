@@ -7,6 +7,7 @@ export interface StudioItem {
   status: ContentStatus
   category: string
   updatedAt: string
+  updatedAtMs?: number
   featured?: boolean
   version?: number
   slug?: string

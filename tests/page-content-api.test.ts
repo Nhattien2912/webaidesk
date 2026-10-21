@@ -43,21 +43,21 @@ const docWith = (page: 'install' | 'prompts' | 'tutorials', patch: Record<string
 
 test('PAGE-API-01 the import is idempotent and creates unpublished drafts (public pages unchanged)', async () => {
   await applySeed()
-  assert.equal(await count('cms_contents', "kind='article' AND json_extract(data_json,'$.section')='page'"), 3)
+  assert.equal(await count('cms_contents', "kind='article' AND json_extract(data_json,'$.section')='page'"), 5)
   await applySeed()
   await applySeed()
-  assert.equal(await count('cms_contents', "kind='article' AND json_extract(data_json,'$.section')='page'"), 3, 'no duplicates after retries')
-  assert.equal(await count('cms_content_revisions', "snapshot_json LIKE '%\"section\":\"page\"%'"), 3)
-  assert.equal(await count('cms_audit_events', "actor='seed-import'"), 3)
+  assert.equal(await count('cms_contents', "kind='article' AND json_extract(data_json,'$.section')='page'"), 5, 'no duplicates after retries')
+  assert.equal(await count('cms_content_revisions', "snapshot_json LIKE '%\"section\":\"page\"%'"), 5)
+  assert.equal(await count('cms_audit_events', "actor='seed-import'"), 5)
   const row = await env.CMS_DB!.prepare("SELECT status, json_extract(data_json,'$.page.published') p, json_extract(data_json,'$.page.draft.values.\"hero.title\"') t FROM cms_contents WHERE slug='install'").first<{ status: string; p: unknown; t: string }>()
   assert.equal(row!.status, 'draft')
   assert.equal(row!.p, null)
   assert.equal(row!.t, 'Hướng dẫn cài đặt AI Desk')
-  for (const id of ['install', 'prompts', 'tutorials']) assert.equal((await pub(`pages/${id}`)).status, 404, id)
+  for (const id of ['install', 'prompts', 'tutorials', 'faq', 'changelog']) assert.equal((await pub(`pages/${id}`)).status, 404, id)
 })
 
 test('PAGE-API-02 the seeded draft equals the code defaults (so publishing it changes nothing)', async () => {
-  for (const id of ['install', 'prompts', 'tutorials'] as const) {
+  for (const id of ['install', 'prompts', 'tutorials', 'faq', 'changelog'] as const) {
     const row = await env.CMS_DB!.prepare("SELECT json_extract(data_json,'$.page.draft') d FROM cms_contents WHERE slug=?1").bind(id).first<{ d: string }>()
     assert.deepEqual(JSON.parse(row!.d), JSON.parse(JSON.stringify(defaultDoc(PAGES[id]))), id)
   }
@@ -65,7 +65,7 @@ test('PAGE-API-02 the seeded draft equals the code defaults (so publishing it ch
 
 test('PAGE-API-03 Studio workflow: save draft keeps the public page, publish updates it, a second edit updates it, a later draft does not', async () => {
   const items = (await json<{ data: Item[] }>(await admin('GET', 'pages'))).data
-  assert.deepEqual(items.map(i => i.slug).sort(), ['install', 'prompts', 'tutorials'])
+  assert.deepEqual(items.map(i => i.slug).sort(), ['changelog', 'faq', 'install', 'prompts', 'tutorials'])
   const install = items.find(i => i.slug === 'install')!
   const first = docWith('install', { 'hero.title': 'Tiêu đề lần 1' })
   // Draft only: public still 404 (code defaults stay in force)
@@ -126,15 +126,15 @@ test('PAGE-API-05 page records cannot be created for arbitrary slugs and never m
   assert.equal((await admin('POST', 'pages', { title: 'Install', slug: 'install' })).status, 409)
   const blog = (await json<{ data: Item[] }>(await admin('GET', 'articles'))).data
   const guides = (await json<{ data: Item[] }>(await admin('GET', 'guides'))).data
-  for (const list of [blog, guides]) assert.ok(!list.some(i => ['install', 'prompts', 'tutorials'].includes(i.slug)))
+  for (const list of [blog, guides]) assert.ok(!list.some(i => ['install', 'prompts', 'tutorials', 'faq', 'changelog'].includes(i.slug)))
   const pagesList = (await json<{ data: Item[] }>(await admin('GET', 'pages'))).data
   const install = pagesList.find(i => i.slug === 'install')!
   for (const path of [`articles/${install.id}`, `guides/${install.id}`]) assert.equal((await admin('GET', path)).status, 404, path)
   assert.equal((await admin('PATCH', `articles/${install.id}`, { version: install.version, title: 'x' })).status, 404)
   const publicBlog = (await json<{ data: Array<{ slug: string }> }>(await pub('articles'))).data
   const publicGuides = (await json<{ data: Array<{ slug: string }> }>(await pub('guides'))).data
-  for (const list of [publicBlog, publicGuides]) assert.ok(!list.some(i => ['install', 'prompts', 'tutorials'].includes(i.slug)))
-  for (const slug of ['install', 'prompts', 'tutorials']) { assert.equal((await pub(`articles/${slug}`)).status, 404); assert.equal((await pub(`guides/${slug}`)).status, 404) }
+  for (const list of [publicBlog, publicGuides]) assert.ok(!list.some(i => ['install', 'prompts', 'tutorials', 'faq', 'changelog'].includes(i.slug)))
+  for (const slug of ['install', 'prompts', 'tutorials', 'faq', 'changelog']) { assert.equal((await pub(`articles/${slug}`)).status, 404); assert.equal((await pub(`guides/${slug}`)).status, 404) }
   const sneaky = await admin('POST', 'articles', { title: 'Lén', data: { page: { draft: null } } })
   assert.equal(sneaky.status, 400)
 })

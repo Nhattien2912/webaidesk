@@ -10,7 +10,7 @@ let vite: ViteDevServer
 let react: { createElement: (type: unknown, props?: unknown, ...children: unknown[]) => unknown }
 let render: (element: unknown) => string
 const norm = (html: string) => html.replace(/\s+/g, ' ').replace(/> </g, '><').trim()
-const EXPORTS: Record<PageId, [string, string]> = { install: ['InstallPage', 'InstallPage'], prompts: ['PromptsPage', 'PromptsPage'], tutorials: ['TutorialsPage', 'TutorialsPage'] }
+const EXPORTS: Record<PageId, [string, string]> = { install: ['pages/InstallPage', 'InstallPage'], prompts: ['pages/PromptsPage', 'PromptsPage'], tutorials: ['pages/TutorialsPage', 'TutorialsPage'], faq: ['components/FaqSection', 'FaqSection'], changelog: ['pages/ChangelogPage', 'ChangelogPage'] }
 
 before(async () => {
   vite = await createServer({ configFile: 'vite.config.ts', logLevel: 'silent', appType: 'custom', server: { middlewareMode: true, hmr: false, watch: null } })
@@ -21,7 +21,7 @@ after(async () => { await vite.close() })
 
 async function page(id: PageId, content?: PageDoc | null): Promise<string> {
   const [file, name] = EXPORTS[id]
-  const mod = await vite.ssrLoadModule(`/src/pages/${file}.tsx`) as Record<string, unknown>
+  const mod = await vite.ssrLoadModule(`/src/${file}.tsx`) as Record<string, unknown>
   return norm(render(react.createElement(mod[name], content === undefined ? null : { content })))
 }
 const fixture = (id: PageId) => fs.readFileSync(`tests/fixtures/page-parity/${id}.html`, 'utf8')

@@ -96,10 +96,10 @@ export function normalizeFaqSearch(value: string): string {
   return value.toLocaleLowerCase('vi-VN').normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').trim()
 }
 
-export function searchFaqs(query: string): FaqEntry[] {
+export function searchFaqs(query: string, list: FaqEntry[] = FAQS): FaqEntry[] {
   const tokens = normalizeFaqSearch(query).split(/\s+/).filter(Boolean)
-  if (!tokens.length) return FAQS
-  return FAQS.filter((faq) => {
+  if (!tokens.length) return list
+  return list.filter((faq) => {
     const text = normalizeFaqSearch(`${faq.question} ${faq.paragraphs.join(' ')}`)
     return tokens.every((token) => text.includes(token))
   })

@@ -15,7 +15,7 @@ export default {
     }
     if(url.pathname.startsWith('/api/content/'))return handlePublicContent(request,env,parts.slice(2))
     if(url.pathname==='/api/comments')return submitComment(request,env,{verify:async()=>({kind:'ok',hostname:'local.invalid',action:'comment'})})
-    if(/^\/admin\/preview\/(install|prompts|tutorials)\/?$/.test(url.pathname)){const asset=await env.ASSETS.fetch(new Request(new URL('/preview',url),request));const headers=new Headers(asset.headers);headers.set('x-frame-options','SAMEORIGIN');return new Response(asset.body,{status:asset.status,headers})}
+    if(/^\/admin\/preview\/(install|prompts|tutorials|faq|changelog)\/?$/.test(url.pathname)){const asset=await env.ASSETS.fetch(new Request(new URL('/preview',url),request));const headers=new Headers(asset.headers);headers.set('x-frame-options','SAMEORIGIN');return new Response(asset.body,{status:asset.status,headers})}
     return env.ASSETS.fetch(request)
   },
 }

@@ -7,10 +7,13 @@
 //
 // Only editorial text lives here. Layout, icons, colours, behaviour, links to /download and every security rule stay in the page components.
 
-export type PageId = 'install' | 'prompts' | 'tutorials'
-export const PAGE_IDS: readonly PageId[] = ['install', 'prompts', 'tutorials']
+import { FAQS } from '../data/faq.ts'
+import { changelog as CHANGELOG } from '../data/changelog.ts'
 
-export type SubFieldType = 'text' | 'longtext' | 'lines' | 'select' | 'url' | 'youtube' | 'date' | 'duration' | 'media' | 'code'
+export type PageId = 'install' | 'prompts' | 'tutorials' | 'faq' | 'changelog'
+export const PAGE_IDS: readonly PageId[] = ['install', 'prompts', 'tutorials', 'faq', 'changelog']
+
+export type SubFieldType = 'text' | 'longtext' | 'lines' | 'select' | 'url' | 'youtube' | 'date' | 'duration' | 'media' | 'code' | 'links'
 export interface SubField {
   key: string
   label: string
@@ -496,7 +499,89 @@ export const TUTORIALS_PAGE: PageDef = {
   ],
 }
 
-export const PAGES: Record<PageId, PageDef> = { install: INSTALL_PAGE, prompts: PROMPTS_PAGE, tutorials: TUTORIALS_PAGE }
+const FAQ_DEFAULT: Array<Record<string, string>> = FAQS.map(faq => ({
+  id: faq.id,
+  question: faq.question,
+  answer: faq.paragraphs.join('\n\n'),
+  links: (faq.links ?? []).map(link => `${link.text} | ${link.href}`).join('\n'),
+}))
+
+export const FAQ_PAGE: PageDef = {
+  id: 'faq',
+  label: 'Câu hỏi thường gặp (trang chủ)',
+  path: '/#faq',
+  title: 'Câu hỏi thường gặp AI Desk',
+  description: 'Khối FAQ ở trang chủ: tiêu đề, mô tả, từng câu hỏi và câu trả lời (các đoạn cách nhau bằng một dòng trống), cùng liên kết trong câu trả lời.',
+  sections: [
+    {
+      id: 'hero', label: 'Đầu khối',
+      fields: [
+        T('hero.eyebrow', 'Nhãn nhỏ phía trên', 'FAQ', 40),
+        T('hero.title', 'Tiêu đề', 'Câu hỏi thường gặp', 120),
+        T('hero.lead', 'Đoạn giới thiệu', 'Những điều cần biết về bản Beta, cách cài đặt và quyền sử dụng AI Desk.', 300, true),
+        T('search.placeholder', 'Gợi ý trong ô tìm kiếm', 'Tìm câu hỏi: tài khoản, Windows…', 120),
+      ],
+    },
+    {
+      id: 'items', label: 'Danh sách câu hỏi',
+      fields: [
+        {
+          key: 'faq.items', label: 'Câu hỏi', type: 'items', maxItems: 40, itemLabel: 'Câu hỏi', titleKey: 'question', default: FAQ_DEFAULT,
+          fields: [
+            { key: 'id', label: 'Mã câu hỏi (chữ thường, số, gạch ngang)', type: 'text', max: 60 },
+            { key: 'question', label: 'Câu hỏi', type: 'text', max: 240 },
+            { key: 'answer', label: 'Câu trả lời (mỗi đoạn cách nhau một dòng trống)', type: 'longtext', max: 4000 },
+            { key: 'links', label: 'Liên kết trong câu trả lời (mỗi dòng: văn bản | /đường-dẫn hoặc https://…)', type: 'links', max: 600, help: 'Văn bản phải xuất hiện nguyên văn trong câu trả lời để trở thành liên kết.' },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+const CHANGELOG_DEFAULT: Array<Record<string, string>> = CHANGELOG.map(entry => ({
+  id: `${entry.scope}-${entry.version}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+  version: entry.version,
+  date: entry.date,
+  scope: entry.scope,
+  status: entry.status,
+  changes: entry.changes.join('\n'),
+}))
+
+export const CHANGELOG_PAGE: PageDef = {
+  id: 'changelog',
+  label: 'Changelog',
+  path: '/changelog',
+  title: 'Changelog AI Desk',
+  description: 'Lịch sử thay đổi của ứng dụng AI Desk và website: tiêu đề trang và từng mục phiên bản (ngày, phạm vi, trạng thái, danh sách thay đổi).',
+  sections: [
+    {
+      id: 'hero', label: 'Đầu trang',
+      fields: [
+        T('hero.title', 'Tiêu đề trang', 'Changelog', 120),
+        T('hero.intro', 'Đoạn giới thiệu', 'Các thay đổi của ứng dụng AI Desk và website.', 300, true),
+      ],
+    },
+    {
+      id: 'entries', label: 'Các phiên bản',
+      fields: [
+        {
+          key: 'entries.items', label: 'Phiên bản / bản cập nhật', type: 'items', maxItems: 60, itemLabel: 'Phiên bản', titleKey: 'version', default: CHANGELOG_DEFAULT,
+          fields: [
+            { key: 'id', label: 'Mã mục (chữ thường, số, gạch ngang)', type: 'text', max: 60 },
+            { key: 'version', label: 'Tên phiên bản', type: 'text', max: 120 },
+            { key: 'date', label: 'Ngày (YYYY-MM-DD)', type: 'date', max: 10 },
+            { key: 'scope', label: 'Phạm vi', type: 'select', max: 20, options: [{ value: 'desktop', label: 'Ứng dụng' }, { value: 'website', label: 'Website' }] },
+            { key: 'status', label: 'Trạng thái', type: 'text', max: 240 },
+            { key: 'changes', label: 'Các thay đổi (mỗi dòng một ý)', type: 'lines', max: 3000 },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+export const PAGES: Record<PageId, PageDef> = { install: INSTALL_PAGE, prompts: PROMPTS_PAGE, tutorials: TUTORIALS_PAGE, faq: FAQ_PAGE, changelog: CHANGELOG_PAGE }
 
 export function allFields(page: PageDef): Field[] {
   return page.sections.flatMap(section => section.fields)
@@ -517,6 +602,7 @@ export function defaultDoc(page: PageDef): PageDoc {
 
 // ---------- validation (shared by the server and the Studio) ----------
 const URL_INTERNAL = /^\/(?!\/)[A-Za-z0-9\-._~/#?=&%]*$/
+const LINK_LINE = /^[^|\n]{1,60} \| (?:\/(?!\/)[A-Za-z0-9\-._~/#?=&%]*|https:\/\/[^\s<>"']{1,500})$/
 const HTTPS = /^https:\/\/[^\s<>"']{1,500}$/
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const YT = /^[A-Za-z0-9_-]{11}$/
@@ -537,6 +623,7 @@ function checkScalar(type: SubFieldType, value: string, max: number, options?: S
     case 'date': return value === '' || (DATE.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value)) ? null : 'date_invalid'
     case 'duration': return value === '' || DURATION.test(value) ? null : 'duration_invalid'
     case 'media': return value === '' || UUID.test(value) ? null : 'media_id_invalid'
+    case 'links': return value.split('\n').every(line => line.trim() === '' || LINK_LINE.test(line.trim())) ? null : 'links_invalid'
     case 'select': return options?.some(option => option.value === value) ? null : 'option_invalid'
     default: return null
   }
@@ -586,7 +673,7 @@ export function validateDoc(pageId: string, input: unknown): { ok: true; doc: Pa
           if (!sub) { problems[path] = 'unknown_field'; bad = true; continue }
           if (typeof subValue !== 'string') { problems[path] = 'string_required'; bad = true; continue }
           const problem = checkScalar(sub.type, subValue, sub.max, sub.options)
-          const multiline = sub.type === 'longtext' || sub.type === 'lines' || sub.type === 'code'
+          const multiline = sub.type === 'longtext' || sub.type === 'lines' || sub.type === 'code' || sub.type === 'links'
           if (problem) { problems[path] = problem; bad = true } else if (!multiline && /[\r\n]/.test(subValue)) { problems[path] = 'single_line_required'; bad = true }
         }
         if (subs.has('id')) {

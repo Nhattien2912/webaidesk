@@ -43,6 +43,7 @@ const PROBLEMS: Record<string, string> = {
   control_characters: "chứa ký tự điều khiển không hợp lệ",
   single_line_required: "chỉ được một dòng",
   url_invalid: "phải là đường dẫn nội bộ (bắt đầu bằng /) hoặc https://",
+  links_invalid: "mỗi dòng phải có dạng: văn bản | /đường-dẫn (hoặc https://…)",
   youtube_id_invalid: "liên kết YouTube không hợp lệ",
   date_invalid: "ngày không hợp lệ (YYYY-MM-DD)",
   duration_invalid: "thời lượng không hợp lệ (ví dụ 03:20)",
@@ -120,7 +121,8 @@ function ScalarInput({ sub, value, onChange, media }: { sub: SubField; value: st
       );
     case "longtext":
     case "lines":
-      return <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={sub.type === "lines" ? 5 : 3} maxLength={sub.max} />;
+    case "links":
+      return <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={sub.type === "lines" || sub.type === "links" ? 5 : 3} maxLength={sub.max} />;
     case "code":
       return <textarea className="mono-input" value={value} onChange={(e) => onChange(e.target.value)} rows={10} maxLength={sub.max} spellCheck={false} />;
     case "youtube":
@@ -299,12 +301,18 @@ function FieldEditor({ field, doc, setValue, media }: { field: Field; doc: PageD
 
 const STATUS_TEXT: Record<string, string> = { none: "Chưa tùy chỉnh — website đang dùng nội dung mặc định trong code", draft: "Có bản nháp — website vẫn dùng nội dung mặc định", published: "Đang xuất bản — website hiển thị nội dung từ Studio", archived: "Đã gỡ — website dùng nội dung mặc định trong code" };
 
-function PageEditor({ pageId, record, onBack, onSaved, notify }: { pageId: PageId; record: PageRecord | null; onBack: () => void; onSaved: (item: StudioItem) => void; notify: (m: string) => void }) {
+export interface PageIntent {
+  pageId: PageId;
+  mode: "edit" | "preview";
+  nonce: number;
+}
+
+function PageEditor({ pageId, record, initialMode = "edit", onBack, onSaved, notify }: { pageId: PageId; record: PageRecord | null; initialMode?: Mode; onBack: () => void; onSaved: (item: StudioItem) => void; notify: (m: string) => void }) {
   const page = PAGES[pageId];
   const [persisted, setPersisted] = useState<PageRecord | null>(record);
   const initial = persisted?.draft ?? persisted?.published ?? defaultDoc(page);
   const [doc, setDoc] = useState<PageDoc>(initial);
-  const [mode, setMode] = useState<Mode>("edit");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [width, setWidth] = useState<390 | 768 | 1440>(1440);
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -499,11 +507,12 @@ function PageEditor({ pageId, record, onBack, onSaved, notify }: { pageId: PageI
   );
 }
 
-export function PageContentManager({ notify }: { notify: (message: string) => void }) {
+export function PageContentManager({ notify, intent }: { notify: (message: string) => void; intent?: PageIntent | null }) {
   const [records, setRecords] = useState<Record<string, PageRecord>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [editing, setEditing] = useState<PageId | null>(null);
+  const [editing, setEditing] = useState<PageId | null>(intent?.pageId ?? null);
+  const [editMode, setEditMode] = useState<Mode>(intent?.mode ?? "edit");
   useEffect(() => {
     let active = true;
     contentRepository.list("page")
@@ -511,11 +520,13 @@ export function PageContentManager({ notify }: { notify: (message: string) => vo
       .catch((e: unknown) => { if (active) { setLoadError(e instanceof RepositoryError ? describeSaveError(e.status, e.code) : "Không tải được danh sách trang."); setLoading(false); } });
     return () => { active = false; };
   }, []);
+  if (editing && loading) return <p className="page-status-note" role="status">Đang tải trang…</p>;
   if (editing) {
     return (
       <PageEditor
         key={editing}
         pageId={editing}
+        initialMode={editMode}
         record={records[editing] ?? null}
         onBack={() => setEditing(null)}
         onSaved={(item) => setRecords((current) => ({ ...current, [item.slug ?? editing]: toRecord(item) }))}
@@ -529,7 +540,7 @@ export function PageContentManager({ notify }: { notify: (message: string) => vo
         <div>
           <span className="studio-eyebrow">Nội dung trang</span>
           <h2>Trang hướng dẫn trên website</h2>
-          <p>Chỉnh sửa chữ, các bước, prompt và video của ba trang có sẵn mà không đổi giao diện. Nội dung chưa chỉnh sẽ dùng bản mặc định trong code.</p>
+          <p>Chỉnh sửa chữ, các bước, prompt, video, FAQ và changelog của các trang có sẵn mà không đổi giao diện. Nội dung chưa chỉnh sẽ dùng bản mặc định trong code.</p>
         </div>
       </div>
       {loadError && <div className="page-error" role="alert"><b>{loadError}</b></div>}
@@ -545,7 +556,7 @@ export function PageContentManager({ notify }: { notify: (message: string) => vo
               <p>{def.description}</p>
               <small>{def.path} · {def.sections.reduce((n, s) => n + s.fields.length, 0)} trường · {hideIds(def).length} khối có thể ẩn</small>
               <div className="page-card-actions">
-                <button className="studio-primary" disabled={loading} onClick={() => setEditing(id)}>Chỉnh sửa</button>
+                <button className="studio-primary" disabled={loading} onClick={() => { setEditMode("edit"); setEditing(id); }}>Chỉnh sửa</button>
                 <a href={def.path} target="_blank" rel="noopener noreferrer">Mở trang công khai</a>
               </div>
             </article>

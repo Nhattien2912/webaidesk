@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Image,
   LayoutDashboard,
+  ListChecks,
   Menu,
   MessageSquare,
   Plus,
@@ -25,12 +26,15 @@ import type { StudioItem } from "../data/studioFixtures";
 import { parseYouTubeId, slugify, type ContentStatus } from "../lib/studio";
 import { MarkdownBody } from "../components/MarkdownBody";
 import { videoCategories } from "../data/tutorials";
-import { PageContentManager } from "./StudioPageContent";
+import { PageContentManager, type PageIntent } from "./StudioPageContent";
+import { ContentOverview } from "./StudioOverview";
+import { PAGES, defaultDoc, type PageId } from "../content/pageContent";
 import { MARKDOWN_SNIPPETS, buildAppData, buildGuideData, buildVideoData, describeSaveError, formatChangelog, insertAtCursor, joinList, mediaMarkdown, splitList } from "../lib/studioEditor";
 import { contentRepository, RepositoryError, type MediaItem } from "../lib/contentRepository";
 
 type Section =
   | "dashboard"
+  | "all"
   | "videos"
   | "articles"
   | "guides"
@@ -45,6 +49,7 @@ const nav: Array<{
   icon: React.FC<{ className?: string }>;
 }> = [
   { id: "dashboard", label: "Tổng quan", icon: LayoutDashboard },
+  { id: "all", label: "Tất cả nội dung", icon: ListChecks },
   { id: "videos", label: "Video", icon: Video },
   { id: "articles", label: "Bài viết", icon: BookOpen },
   { id: "guides", label: "Hướng dẫn", icon: GraduationCap },
@@ -108,9 +113,11 @@ function Notice({ message }: { message: string }) {
 function Dashboard({
   items,
   navigate,
+  onEdit,
 }: {
   items: StudioItem[];
   navigate: (section: Section) => void;
+  onEdit: (item: StudioItem) => void;
 }) {
   const counts = (type: StudioItem["type"]) =>
     items.filter((item) => item.type === type).length;
@@ -181,6 +188,13 @@ function Dashboard({
             </div>
           </div>
           <div className="quick-actions">
+            <button onClick={() => navigate("all")}>
+              <ListChecks />
+              <span>
+                <b>Xem tất cả nội dung</b>
+                <small>Cái gì đang công khai, cái gì chỉ là bản nháp</small>
+              </span>
+            </button>
             <button onClick={() => navigate("videos")}>
               <Video />
               <span>
@@ -231,7 +245,11 @@ function Dashboard({
           </div>
         </div>
       </section>
-      <ContentTable title="Nội dung gần đây" items={items} />
+      <ContentTable
+        title="Nội dung gần đây"
+        items={[...items].filter((item) => item.status !== "archived").sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0)).slice(0, 8)}
+        onEdit={onEdit}
+      />
     </>
   );
 }
@@ -993,8 +1011,53 @@ export const StudioPage: React.FC = () => {
     setNotice(message);
     window.setTimeout(() => setNotice(""), 3200);
   }, []);
+  const [pageIntent, setPageIntent] = useState<PageIntent | null>(null);
+  const [allState, setAllState] = useState<{ loading: boolean; error: string }>({ loading: true, error: "" });
+  const refreshAll = useCallback(async () => {
+    try {
+      const types: StudioItem["type"][] = ["article", "guide", "video", "app", "page"];
+      const lists = await Promise.all(types.map((type) => contentRepository.list(type)));
+      setItems(lists.flat());
+      setAllState({ loading: false, error: "" });
+    } catch (error) {
+      setAllState({ loading: false, error: error instanceof RepositoryError ? `Không tải đủ dữ liệu CMS (API ${error.status}: ${error.code}).` : "Không tải được dữ liệu CMS." });
+    }
+  }, []);
+  useEffect(() => {
+    void refreshAll();
+  }, [refreshAll]);
+  const openPage = (pageId: PageId, mode: "edit" | "preview") => {
+    setPageIntent({ pageId, mode, nonce: Date.now() });
+    setSection("pages");
+    setEditor(null);
+    setDrawer(false);
+    window.history.replaceState({}, "", "/admin/pages");
+  };
+  const editItem = (item: StudioItem) => {
+    if (item.type === "page") {
+      openPage((item.slug as PageId) ?? "install", "edit");
+      return;
+    }
+    const next: Section = item.type === "video" ? "videos" : item.type === "article" ? "articles" : item.type === "guide" ? "guides" : "apps";
+    setSection(next);
+    setDrawer(false);
+    window.history.replaceState({}, "", `/admin/${next}`);
+    setEditor({ type: item.type, item });
+  };
+  const createDraftFromDefault = async (pageId: PageId) => {
+    const page = PAGES[pageId];
+    try {
+      await contentRepository.save({ id: `page-${pageId}`, type: "page", slug: pageId, title: page.title, summary: "", bodyMarkdown: "", category: "Trang nội dung", tags: [], status: "draft", seoTitle: "", metaDescription: "", featured: false, data: { section: "page", page: { draft: defaultDoc(page), published: null } }, updatedAt: "" });
+      await refreshAll();
+      notify("Đã tạo bản nháp từ nội dung mặc định. Website công khai chưa thay đổi.");
+      openPage(pageId, "preview");
+    } catch (error) {
+      notify(error instanceof RepositoryError ? describeSaveError(error.status, error.code, error.fields) : "Lỗi mạng — chưa tạo được bản nháp.");
+    }
+  };
   const navigate = (next: Section) => {
     setSection(next);
+    setPageIntent(null);
     setEditor(null);
     setDrawer(false);
     const path = next === "dashboard" ? "/admin" : `/admin/${next}`;
@@ -1144,7 +1207,7 @@ export const StudioPage: React.FC = () => {
               onSave={save}
             />
           ) : section === "dashboard" ? (
-            <Dashboard items={filtered} navigate={navigate} />
+            <Dashboard items={filtered} navigate={navigate} onEdit={editItem} />
           ) : section === "videos" ||
             section === "articles" ||
             section === "guides" ||
@@ -1166,8 +1229,10 @@ export const StudioPage: React.FC = () => {
               }
               onEdit={(item) => setEditor({ type: item.type, item })}
             />
+          ) : section === "all" ? (
+            <ContentOverview items={filtered} loading={allState.loading} loadError={allState.error} onEditItem={editItem} onOpenPage={openPage} onCreateDraft={createDraftFromDefault} />
           ) : section === "pages" ? (
-            <PageContentManager notify={notify} />
+            <PageContentManager notify={notify} intent={pageIntent} />
           ) : section === "comments" ? (
             <CommentsManager notify={notify} />
           ) : section === "media" ? (

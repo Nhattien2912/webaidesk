@@ -1,7 +1,10 @@
 import React, { useId, useRef, useState } from 'react'
 import { Minus, Plus, Search, X } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import { FAQS, searchFaqs, type FaqEntry } from '../data/faq'
+import { searchFaqs, type FaqEntry } from '../data/faq'
+import { usePageContent } from '../lib/usePageContent'
+import { toFaqEntries } from '../lib/faqEntries'
+import type { PageDoc } from '../content/pageContent'
 import './faq.css'
 
 const AnswerParagraph: React.FC<{ text: string; links?: FaqEntry['links'] }> = ({ text, links }) => {
@@ -18,12 +21,15 @@ const AnswerParagraph: React.FC<{ text: string; links?: FaqEntry['links'] }> = (
   return <p>{parts}</p>
 }
 
-export const FaqSection: React.FC = () => {
-  const [openQuestion, setOpenQuestion] = useState<string | null>(FAQS[0].id)
+export const FaqSection: React.FC<{ content?: PageDoc | null; mediaBase?: string }> = ({ content, mediaBase }) => {
+  const c = usePageContent('faq', content, mediaBase)
+  const faqs = toFaqEntries(c.items('faq.items'))
+  const [openChoice, setOpenQuestion] = useState<string | null | undefined>(undefined)
+  const openQuestion = openChoice === undefined ? (faqs[0]?.id ?? null) : openChoice
   const [query, setQuery] = useState('')
   const baseId = useId()
   const searchRef = useRef<HTMLInputElement>(null)
-  const filtered = searchFaqs(query)
+  const filtered = searchFaqs(query, faqs)
 
   const clearSearch = () => {
     setQuery('')
@@ -34,17 +40,17 @@ export const FaqSection: React.FC = () => {
     <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="faq-v3">
       <div className="container-content faq-v3-layout">
         <div className="faq-v3-intro">
-          <p className="faq-v3-eyebrow">FAQ</p>
-          <h2 id="faq-title">Câu hỏi thường gặp</h2>
-          <p className="faq-v3-lead">Những điều cần biết về bản Beta, cách cài đặt và quyền sử dụng AI Desk.</p>
+          <p className="faq-v3-eyebrow">{c.t('hero.eyebrow')}</p>
+          <h2 id="faq-title">{c.t('hero.title')}</h2>
+          <p className="faq-v3-lead">{c.t('hero.lead')}</p>
           <div className="faq-v3-search">
             <label htmlFor={`${baseId}-search`} className="sr-only">Tìm câu hỏi</label>
             <Search className="faq-v3-search-icon" aria-hidden="true" />
-            <input ref={searchRef} id={`${baseId}-search`} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm câu hỏi: tài khoản, Windows…" aria-describedby={`${baseId}-search-hint`} />
+            <input ref={searchRef} id={`${baseId}-search`} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={c.t('search.placeholder')} aria-describedby={`${baseId}-search-hint`} />
             {query && <button type="button" className="faq-v3-clear" onClick={clearSearch} aria-label="Xóa từ khóa tìm kiếm"><X aria-hidden="true" /></button>}
           </div>
           <p id={`${baseId}-search-hint`} className="faq-v3-search-hint">Tìm theo câu hỏi hoặc nội dung trả lời, có dấu hoặc không dấu.</p>
-          <p className="faq-v3-result-count" role="status" aria-live="polite" aria-atomic="true">{query.trim() ? `${filtered.length} câu hỏi phù hợp` : `${FAQS.length} câu hỏi giúp bạn bắt đầu`}</p>
+          <p className="faq-v3-result-count" role="status" aria-live="polite" aria-atomic="true">{query.trim() ? `${filtered.length} câu hỏi phù hợp` : `${faqs.length} câu hỏi giúp bạn bắt đầu`}</p>
         </div>
 
         <div className="faq-v3-list">

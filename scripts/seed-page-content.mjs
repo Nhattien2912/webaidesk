@@ -1,4 +1,4 @@
-// Idempotent import of the CURRENT /install, /prompts and /tutorials content into the CMS.
+// Idempotent import of every registered, source-backed editorial page into the CMS.
 //
 //   node scripts/seed-page-content.mjs            # writes docs/page-content-inventory/* (inventory JSON + seed SQL), changes nothing remote
 //
@@ -10,6 +10,10 @@
 //  * The records are created as DRAFT with the full snapshot in `data.page.draft` and `published = null`, so nothing changes publicly
 //    until the owner publishes in the Studio. The website keeps rendering the code defaults, which the snapshot equals.
 //  * No schema change, no UPDATE, no DELETE.
+//  * Provenance + reconciliation: every record created here carries `data.provenance` ({source:'code-default', importer, registry}). The page slug is the
+//    stable identifier: when a record with that slug already exists (imported earlier, or created/edited in the Studio) the INSERT is skipped, so a
+//    repeated import can never overwrite later Studio edits. After the first import Studio/D1 is the source for editorial changes; there is no
+//    periodic sync back from code or from the public website.
 import fs from 'node:fs'
 import { PAGES, PAGE_IDS, defaultDoc } from '../src/content/pageContent.ts'
 
@@ -24,7 +28,7 @@ PAGE_IDS.forEach((id, index) => {
   const doc = defaultDoc(page)
   fs.writeFileSync(`${outDir}/${id}.json`, `${JSON.stringify({ page: id, path: page.path, title: page.title, hidden: doc.hidden, values: doc.values }, null, 2)}\n`)
   const contentId = `00000000-0000-4000-8000-0000000000a${index + 1}`
-  const data = JSON.stringify({ section: 'page', page: { draft: doc, published: null } })
+  const data = JSON.stringify({ section: 'page', page: { draft: doc, published: null }, provenance: { source: 'code-default', importer: 'scripts/seed-page-content.mjs', registry: 'src/content/pageContent.ts' } })
   const content = { id: contentId, kind: 'article', slug: id, title: page.title, summary: '', bodyMarkdown: '', category: 'Trang nội dung', tags: [], seoTitle: '', metaDescription: '', featured: false, status: 'draft', data: JSON.parse(data), version: 1, createdAt: now, updatedAt: now, publishedAt: null, archivedAt: null }
   statements.push(
     `INSERT INTO cms_contents (id,kind,slug,title,summary,body_markdown,category,tags_json,seo_title,meta_description,featured,status,data_json,version,created_at,updated_at,published_at,archived_at)`,

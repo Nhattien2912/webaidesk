@@ -5,6 +5,8 @@ import './index.css'
 import { InstallPage } from './pages/InstallPage'
 import { PromptsPage } from './pages/PromptsPage'
 import { TutorialsPage } from './pages/TutorialsPage'
+import { FaqSection } from './components/FaqSection'
+import { ChangelogPage } from './pages/ChangelogPage'
 import { PAGE_IDS, defaultDoc, PAGES, validateDoc, type PageDoc, type PageId } from './content/pageContent'
 
 const MEDIA_BASE = '/api/admin/media'
@@ -26,7 +28,7 @@ function PreviewApp() {
     window.parent.postMessage({ type: 'aidesk-preview-ready' }, window.location.origin)
     return () => window.removeEventListener('message', onMessage)
   }, [pageId])
-  const Page = pageId === 'install' ? InstallPage : pageId === 'prompts' ? PromptsPage : TutorialsPage
+  const Page = { install: InstallPage, prompts: PromptsPage, tutorials: TutorialsPage, faq: FaqSection, changelog: ChangelogPage }[pageId]
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1">
