@@ -2,6 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { headingSlug } from "../lib/markdownToc";
+import { youtubeFromUrl } from "../lib/markdownVideo";
 
 const safeMarkdownUrl = (url: string) => {
   if (url.startsWith("/") || url.startsWith("#")) return url;
@@ -12,6 +13,16 @@ const safeMarkdownUrl = (url: string) => {
     return "";
   }
 };
+
+/** A paragraph that is exactly one bare YouTube URL (autolink) becomes a player; any other paragraph is untouched. */
+interface HastNode { type?: string; tagName?: string; value?: string; properties?: { href?: unknown }; children?: HastNode[] }
+function soleYouTubeLink(node: HastNode | undefined) {
+  const kids = (node?.children ?? []).filter((child) => !(child.type === "text" && !(child.value ?? "").trim()));
+  const link = kids.length === 1 ? kids[0] : undefined;
+  if (link?.type !== "element" || link.tagName !== "a" || typeof link.properties?.href !== "string") return null;
+  const label = (link.children ?? []).map((part) => (part.type === "text" ? part.value ?? "" : "<element>")).join("");
+  return label === link.properties.href ? youtubeFromUrl(link.properties.href) : null;
+}
 
 /** Only images that the public media route will serve (published content only) are rendered. */
 const PUBLIC_MEDIA = /^\/api\/content\/media\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,6 +102,29 @@ export const MarkdownBody: React.FC<{ children: string; headingIds?: boolean; me
           ) : (
             <span>{label}</span>
           ),
+        p: ({ children: text, node }) => {
+          const video = soleYouTubeLink(node as HastNode | undefined);
+          return video ? (
+            <figure className={`md-video ${video.vertical ? "md-video-vertical" : "md-video-wide"}`}>
+              <div className="md-video-frame">
+                <iframe
+                  src={video.embedUrl}
+                  title="Video YouTube"
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="encrypted-media; picture-in-picture; fullscreen"
+                  sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"
+                  allowFullScreen
+                />
+              </div>
+              <figcaption>
+                Không xem được video? <a href={video.watchUrl} target="_blank" rel="noopener noreferrer">Mở trên YouTube</a>
+              </figcaption>
+            </figure>
+          ) : (
+            <p>{text}</p>
+          );
+        },
         blockquote: ({ children: quote }) => <Blockquote>{quote}</Blockquote>,
         input: ({ type, checked }) => (type === "checkbox" ? <input type="checkbox" checked={Boolean(checked)} disabled readOnly aria-label={checked ? "Đã hoàn thành" : "Chưa hoàn thành"} /> : null),
         table: ({ children: rows }) => (
