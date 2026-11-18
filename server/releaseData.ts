@@ -35,6 +35,37 @@ export const RELEASE_DATA: unknown = /* RELEASES:BEGIN */ {
         }
       },
       "updateTrust": "feed-only"
+    },
+    {
+      "version": "0.5.0-beta.3",
+      "channel": "beta",
+      "releasedAt": "2026-11-18T04:53:24.025Z",
+      "minOs": "Windows 10/11 64-bit",
+      "signature": "unsigned",
+      "status": "published",
+      "approved": true,
+      "artifacts": {
+        "installer": {
+          "fileName": "AI-Desk-Setup-0.5.0-beta.3.exe",
+          "r2Key": "releases/beta/0.5.0-beta.3/AI-Desk-Setup-0.5.0-beta.3.exe",
+          "sizeBytes": 131487113,
+          "sha256": "3a78fd9b458f93d0e989cd3a0520e0703d1375d8c2a627e83a3834240e701f2f",
+          "sha512": "zeyFRBZvm9WwWlxFboO1rPxIh3sCJBssm9aIpyAsR1amFIgWQjs5Dq40lAgkV2eDpPrF9jYQU9JvLagbdfiDjA==",
+          "blockmap": {
+            "fileName": "AI-Desk-Setup-0.5.0-beta.3.exe.blockmap",
+            "r2Key": "releases/beta/0.5.0-beta.3/AI-Desk-Setup-0.5.0-beta.3.exe.blockmap",
+            "sizeBytes": 137304,
+            "sha256": "35b70e742d6596d55bd49c59687c7804a5b8f3f31d01338206104b50274f268c"
+          }
+        },
+        "updateMetadata": {
+          "fileName": "latest.yml",
+          "r2Key": "releases/beta/0.5.0-beta.3/latest.yml",
+          "sizeBytes": 364,
+          "sha256": "168349e76d58f3087a738a07f74ffcaf1e2e6f62d5589c1d54c29266e5d290e9"
+        }
+      },
+      "updateTrust": "feed-only"
     }
   ],
   "components": [
@@ -48,6 +79,19 @@ export const RELEASE_DATA: unknown = /* RELEASES:BEGIN */ {
         "r2Key": "releases/beta/components/1/components.json",
         "sizeBytes": 754,
         "sha256": "33e1f799656a4225669b655a4c8ef5cc444ef3199540b00041dc576938ddce31"
+      },
+      "extensionPackages": []
+    },
+    {
+      "channel": "beta",
+      "sequence": 2,
+      "status": "published",
+      "approved": true,
+      "manifest": {
+        "fileName": "components.json",
+        "r2Key": "releases/beta/components/2/components.json",
+        "sizeBytes": 754,
+        "sha256": "7a8b2c2e1ff92cae15092e921384f5a8ddc900f751bf7613d2ba25606ccb2598"
       },
       "extensionPackages": []
     }
