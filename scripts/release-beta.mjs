@@ -542,9 +542,28 @@ export async function fetchBytes(url, init) {
   return { status: r.status, headers: r.headers, body: Buffer.from(await r.arrayBuffer()) }
 }
 
+/**
+ * Read-only GET with a bounded wait for NETWORK errors only (a fresh <hash>.pages.dev preview needs a few seconds of DNS).
+ * Any HTTP response — including wrong content or 404/5xx — is returned at once and judged by the caller; nothing is ever
+ * written, so this is not a retry of a state-changing step.
+ */
+export async function readWithRetry(get, url, init, { attempts = 6, delayMs = 10_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+  let last
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await get(url, init)
+    } catch (e) {
+      last = e
+      if (i < attempts) await sleep(delayMs)
+    }
+  }
+  throw new ReleaseError('VERIFY-READ', `cannot reach ${url} after ${attempts} attempts (${String(last?.message ?? last).slice(0, 80)}) — read-only check, nothing was changed`)
+}
+
 /** Verifies a deployed feed (preview or production) serves EXACTLY this release. */
-export async function verifyFeed({ origin, channel, record, ymlText, components, signer, get = fetchBytes }) {
+export async function verifyFeed({ origin, channel, record, ymlText, components, signer, get: rawGet = fetchBytes, retry }) {
   const problems = []
+  const get = (url, init) => readWithRetry(rawGet, url, init, retry)
   const yml = await get(`${origin}/api/updates/${channel}/latest.yml`)
   if (yml.status !== 200 || yml.body.toString('utf8') !== ymlText) problems.push(`latest.yml at ${origin} is not this release (HTTP ${yml.status})`)
   const comp = await get(`${origin}/api/updates/${channel}/components.json`)

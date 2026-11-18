@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 // @ts-expect-error plain ESM script without type declarations
-import { DEFAULTS, TARGETS, readAsarFiles, run, preflight, ReleaseError, detectAppTarget, resolveTarget, writeReleaseFileAtomic } from '../scripts/release-beta.mjs'
+import { DEFAULTS, TARGETS, readAsarFiles, run, preflight, ReleaseError, detectAppTarget, resolveTarget, writeReleaseFileAtomic, readWithRetry } from '../scripts/release-beta.mjs'
 import { immutableKey } from '../server/releaseRecords.ts'
 
 const sha256 = (b: Uint8Array | string) => createHash('sha256').update(b).digest('hex')
@@ -460,4 +460,18 @@ test('writeReleaseFileAtomic keeps the file intact when the new data is invalid 
   writeReleaseFileAtomic({ ...data, note: 'x' }, fx.releases)
   assert.equal(catalogOf(fx.releases).note, 'x')
   assert.notEqual(readFileSync(fx.releases, 'utf8'), before)
+})
+
+test('read-only feed checks wait (bounded) for network errors only; an HTTP answer is never retried', async () => {
+  let n = 0
+  const flaky = async () => { if (++n < 3) throw new Error('getaddrinfo ENOTFOUND abc.webaidesk-staging.pages.dev'); return { status: 200, body: Buffer.from('ok') } }
+  const sleeps: number[] = []
+  const r = await readWithRetry(flaky, 'https://x', undefined, { attempts: 6, delayMs: 7, sleep: async (ms: number) => { sleeps.push(ms) } })
+  assert.equal(r.status, 200)
+  assert.deepEqual(sleeps, [7, 7])
+  let m = 0
+  const wrong = async () => { m++; return { status: 404, body: Buffer.from('no') } }
+  assert.equal((await readWithRetry(wrong, 'https://x', undefined, { sleep: async () => {} })).status, 404)
+  assert.equal(m, 1, 'an HTTP response (even 404 / wrong content) is returned at once')
+  await assert.rejects(readWithRetry(async () => { throw new Error('down') }, 'https://x', undefined, { attempts: 3, sleep: async () => {} }), /VERIFY-READ FAILED[\s\S]*after 3 attempts[\s\S]*nothing was changed/)
 })

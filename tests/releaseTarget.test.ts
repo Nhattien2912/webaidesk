@@ -27,7 +27,11 @@ test('selectReleaseTarget: production by default; staging only with RELEASE_TARG
 test('shipped staging catalog is valid and separate from production', () => {
   assert.deepEqual([...STAGING_RELEASE_FILE_ERRORS], [])
   assert.ok(STAGING_RELEASE_RECORDS.every((r) => !RELEASE_RECORDS.includes(r)))
-  assert.deepEqual(STAGING_COMPONENT_RECORDS, [])
+  // State-agnostic: the staging catalog is written by the pipeline (QA releases). Whatever it holds must never reuse a
+  // production record's installer (different builds, different keys) and every component manifest is a beta-channel one.
+  const prodInstallers = new Set(RELEASE_RECORDS.map((r) => r.artifacts.installer.sha512))
+  assert.ok(STAGING_RELEASE_RECORDS.every((r) => !prodInstallers.has(r.artifacts.installer.sha512)), 'no production installer in the staging catalog')
+  assert.ok(STAGING_COMPONENT_RECORDS.every((c) => c.channel === 'beta'))
 })
 
 test('feed route: target mismatch → 503 target_mismatch, never the other catalog', async () => {
@@ -36,9 +40,10 @@ test('feed route: target mismatch → 503 target_mismatch, never the other catal
   assert.equal(await err(prodOnStagingVar), 'target_mismatch')
   const stagingHostNoVar = await handleUpdate(req('webaidesk-staging.pages.dev', 'components.json'), { RELEASES: emptyBucket }, 'beta', 'components.json')
   assert.equal(await err(stagingHostNoVar), 'target_mismatch')
-  // correctly configured staging: its own (empty) catalog → no_release, not production's beta.2
+  // correctly configured staging: its OWN catalog (empty → no_release; a QA release → its record, bucket consulted →
+  // unavailable with this empty test bucket) — never production's beta.2
   const staging = await handleUpdate(req('webaidesk-staging.pages.dev'), { RELEASES: emptyBucket, RELEASE_TARGET: 'staging' }, 'beta', 'latest.yml')
-  assert.equal(await err(staging), 'no_release')
+  assert.equal(await err(staging), STAGING_RELEASE_RECORDS.some((r) => r.channel === 'beta' && r.status === 'published') ? 'release_unavailable' : 'no_release')
   // production host, variable unset: production catalog exactly as before (record found → bucket consulted → unavailable here)
   const prod = await handleUpdate(req('webaidesk.pages.dev'), { RELEASES: emptyBucket }, 'beta', 'latest.yml')
   assert.equal(await err(prod), RELEASE_RECORDS.some((r) => r.channel === 'beta' && r.status === 'published') ? 'release_unavailable' : 'no_release')
