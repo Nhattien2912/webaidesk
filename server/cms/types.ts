@@ -40,6 +40,8 @@ export interface R2BucketLike {
 export interface CmsEnv {
   CMS_DB?: D1Like
   CMS_MEDIA?: R2BucketLike
+  /** PRIVATE R2 bucket with raw bug report bundles (bug-reports/<yyyy-mm>/<BR-id>.json); read-only from the admin. */
+  BUG_REPORTS?: R2BucketLike
   ACCESS_TEAM_DOMAIN?: string
   ACCESS_AUD?: string
   ACCESS_AUDIENCE_MAP?: string

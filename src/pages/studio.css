@@ -195,6 +195,18 @@
 .trash-actions{display:flex;flex-wrap:wrap;gap:8px}
 .trash-actions button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:9px;font-size:.8rem;font-weight:650;cursor:pointer}
 .trash-actions .studio-primary{border:1px solid transparent;background:#2563eb;color:#fff}
+.bug-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,1.6fr) minmax(0,1.1fr) minmax(0,1.4fr);gap:12px;align-items:center;padding:14px 4px;border-top:1px solid #eef2f7;font-size:.85rem;color:#334155}
+.bug-chips{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+.bug-chips code,.bug-chips span{padding:2px 7px;border-radius:999px;background:#eef2ff;color:#1e3a8a;font-size:.72rem;overflow-wrap:anywhere}
+.bug-chips code{background:#fef2f2;color:#991b1b}
+.bug-download{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:9px;background:#2563eb;color:#fff;font-size:.8rem;font-weight:650;text-decoration:none}
+.bug-download svg{width:16px;height:16px}
+.bug-description{grid-column:1/-1;color:#334155}
+.bug-description summary{cursor:pointer;color:#1e3a8a;font-weight:600}
+.bug-description p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.bug-filters{flex-wrap:wrap}
+.bug-filters button{border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:0 14px;min-height:40px;color:#1e3a8a;font-weight:600;cursor:pointer}
+@media(max-width:900px){.bug-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.bug-row .trash-main,.bug-row .trash-actions{grid-column:1/-1}.bug-row>div[data-label]::before{content:attr(data-label);display:block;color:#94a3b8;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}}
 .trash-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px}
 .trash-pager button{min-height:38px;padding:0 14px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#1e3a8a;font-weight:600;cursor:pointer}
 .trash-pager button:disabled{opacity:.5;cursor:not-allowed}

@@ -13,7 +13,7 @@ test('deployable function trees are disjoint',()=>{
   const publicFiles=fs.readdirSync('functions-public/api',{recursive:true}).map(String)
   const privateFiles=fs.readdirSync('functions-private',{recursive:true}).map(String)
   assert.equal(publicFiles.some(file=>file.includes('admin')),false)
-  assert.equal(privateFiles.some(file=>file.includes('comments.ts')||file.includes('waitlist.ts')),false)
+  assert.equal(privateFiles.some(file=>file.includes('comments.ts')||file.includes('waitlist.ts')||file.includes('bug-report.ts')),false)
 })
 
 test('private Studio repository cannot fall back to demo fixtures',()=>{

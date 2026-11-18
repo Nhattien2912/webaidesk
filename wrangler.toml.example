@@ -26,3 +26,10 @@ ALLOWED_ORIGINS = ""
 [[r2_buckets]]
 binding = "RELEASES"
 bucket_name = "aidesk-releases"
+
+# Bug report V1 (POST /api/bug-report). PRIVATE bucket: no public access, no r2.dev, no custom domain.
+# The intake stores metadata in the CMS D1 database, bound as CMS_DB (migrations/0007_bug_reports.sql).
+# Also set the secret: wrangler pages secret put IP_HASH_SALT --project-name <PROJECT>
+[[r2_buckets]]
+binding = "BUG_REPORTS"
+bucket_name = "aidesk-bug-reports"

@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BookOpen,
   Box,
+  Bug,
   Check,
   ChevronRight,
   FileText,
@@ -29,6 +30,7 @@ import { videoCategories } from "../data/tutorials";
 import { PageContentManager, type PageIntent } from "./StudioPageContent";
 import { ContentOverview } from "./StudioOverview";
 import { ConfirmDialog, TrashManager } from "./StudioTrash";
+import { BugReportsManager } from "./StudioBugReports";
 import { describeTrashError, moveToTrash, type TrashType } from "../lib/trashApi";
 import { PAGES, defaultDoc, type PageId } from "../content/pageContent";
 import { MARKDOWN_SNIPPETS, buildAppData, buildGuideData, buildVideoData, describeSaveError, formatChangelog, insertAtCursor, joinList, mediaMarkdown, splitList } from "../lib/studioEditor";
@@ -44,6 +46,7 @@ type Section =
   | "apps"
   | "comments"
   | "media"
+  | "bugs"
   | "trash"
   | "settings";
 const nav: Array<{
@@ -60,6 +63,7 @@ const nav: Array<{
   { id: "apps", label: "Ứng dụng", icon: Box },
   { id: "comments", label: "Bình luận", icon: MessageSquare },
   { id: "media", label: "Thư viện Media", icon: Image },
+  { id: "bugs", label: "Báo lỗi", icon: Bug },
   { id: "trash", label: "Thùng rác", icon: Trash2 },
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
@@ -1291,6 +1295,8 @@ export const StudioPage: React.FC = () => {
             <ContentOverview items={filtered} loading={allState.loading} loadError={allState.error} onEditItem={editItem} onOpenPage={openPage} onCreateDraft={createDraftFromDefault} onDeleteItem={requestDelete} />
           ) : section === "pages" ? (
             <PageContentManager notify={notify} intent={pageIntent} />
+          ) : section === "bugs" ? (
+            <BugReportsManager />
           ) : section === "trash" ? (
             <TrashManager notify={notify} onChanged={() => void refreshAll()} />
           ) : section === "comments" ? (

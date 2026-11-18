@@ -8,6 +8,7 @@ import { canTransition } from '../../src/lib/studio.ts'
 import { referencedMediaIds } from './validation.ts'
 import { legacyUrlAudit, mediaCleanupDryRun } from './retention.ts'
 import { handleTrash } from './trash.ts'
+import { handleAdminBugReports } from './bugReports.ts'
 
 export interface CmsDeps { verifyAccess?:VerifyAccess; now?:()=>number }
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; frame-ancestors 'none'",'referrer-policy':'no-referrer'}
@@ -28,6 +29,7 @@ export async function handleAdminContent(request:Request,env:CmsEnv,path:string[
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...cors(request,env),'access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-csrf-token'}})
   const auth=await authorize(request,env,deps.verifyAccess);if(!auth.ok)return fail(auth.code,auth.status)
   if(path[0]==='session'&&request.method==='GET'){try{return json({data:{email:auth.identity.email,csrfToken:await csrfToken(auth.identity,env),environment:env.ENVIRONMENT??'unknown'}})}catch{return fail('csrf_not_configured',503)}}
+  if(path[0]==='bug-reports')return handleAdminBugReports(request,env,path)
   if(path[0]==='comments')return handleAdminComments(request,env,path,auth.identity,deps.now?.()??Date.now())
   if(path[0]==='security'&&path[1]==='url-audit'&&request.method==='GET')return legacyUrlAudit(env)
   if(path[0]==='media'&&path[1]==='cleanup'&&request.method==='POST')return mediaCleanupDryRun(request,env,auth.identity.email,deps.now?.()??Date.now())
