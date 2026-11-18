@@ -25,7 +25,9 @@ function cors(request:Request,env:CmsEnv):HeadersInit{const origin=request.heade
 export { handlePublicContent } from './publicContent.ts'
 
 export async function handleAdminContent(request:Request,env:CmsEnv,path:string[],deps:CmsDeps={}):Promise<Response>{
-  if(env.CMS_ADMIN_ENABLED!=='true'||!['staging','production'].includes(env.ENVIRONMENT??''))return fail('admin_disabled',404)
+  // BUG_REPORTS_ADMIN_ENABLED opens ONLY the read-only bug report admin (and the session it needs); the CMS stays disabled.
+  const bugReportsOnly=env.CMS_ADMIN_ENABLED!=='true'&&env.BUG_REPORTS_ADMIN_ENABLED==='true'&&(path[0]==='bug-reports'||path[0]==='session')
+  if((env.CMS_ADMIN_ENABLED!=='true'&&!bugReportsOnly)||!['staging','production'].includes(env.ENVIRONMENT??''))return fail('admin_disabled',404)
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...cors(request,env),'access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-csrf-token'}})
   const auth=await authorize(request,env,deps.verifyAccess);if(!auth.ok)return fail(auth.code,auth.status)
   if(path[0]==='session'&&request.method==='GET'){try{return json({data:{email:auth.identity.email,csrfToken:await csrfToken(auth.identity,env),environment:env.ENVIRONMENT??'unknown'}})}catch{return fail('csrf_not_configured',503)}}

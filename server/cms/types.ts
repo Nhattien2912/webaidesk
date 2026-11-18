@@ -42,6 +42,10 @@ export interface CmsEnv {
   CMS_MEDIA?: R2BucketLike
   /** PRIVATE R2 bucket with raw bug report bundles (bug-reports/<yyyy-mm>/<BR-id>.json); read-only from the admin. */
   BUG_REPORTS?: R2BucketLike
+  /** Dedicated D1 for bug reports (preferred over CMS_DB by the bug report admin). */
+  BUG_REPORTS_DB?: D1Like
+  /** "true" = only the read-only bug report admin (+ session) is served while CMS_ADMIN_ENABLED stays off. */
+  BUG_REPORTS_ADMIN_ENABLED?: string
   ACCESS_TEAM_DOMAIN?: string
   ACCESS_AUD?: string
   ACCESS_AUDIENCE_MAP?: string

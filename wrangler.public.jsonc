@@ -6,5 +6,17 @@
   "pages_build_output_dir": "dist-public",
   "vars": {
     "ENVIRONMENT": "production"
-  }
+  },
+  // Bug report V1 intake only (POST /api/bug-report). A DEDICATED D1, deliberately NOT bound as CMS_DB: binding the Studio
+  // database here would also switch on the public CMS content / comments APIs. Secret IP_HASH_SALT is set on the project.
+  "d1_databases": [{
+    "binding": "BUG_REPORTS_DB",
+    "database_name": "aidesk-bug-reports",
+    "database_id": "a766913c-9f8d-4e0b-a628-9f846ea2ab41"
+  }],
+  // PRIVATE bucket: no public access, no r2.dev, no custom domain.
+  "r2_buckets": [{
+    "binding": "BUG_REPORTS",
+    "bucket_name": "aidesk-bug-reports"
+  }]
 }

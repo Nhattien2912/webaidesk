@@ -68,7 +68,7 @@ function parseCursor(value: string | null): { createdAt: number; id: string } | 
 
 export async function handleAdminBugReports(request: Request, env: CmsEnv, path: string[]): Promise<Response> {
   if (request.method !== 'GET') return fail('method_not_allowed', 405)
-  const db = env.CMS_DB
+  const db = env.BUG_REPORTS_DB ?? env.CMS_DB
   if (!db) return fail('cms_not_configured', 503)
   const [, id, sub] = path
 

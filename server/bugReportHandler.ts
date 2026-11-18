@@ -33,7 +33,9 @@ export interface BugReportBucket {
 }
 
 export interface BugReportEnv {
-  /** Same D1 database as the Studio (migrations/ applied, incl. 0007_bug_reports.sql). */
+  /** Dedicated D1 for bug reports (only 0007_bug_reports.sql applied). Preferred over CMS_DB. */
+  BUG_REPORTS_DB?: BugReportD1
+  /** Fallback: the Studio D1 (migrations/ applied, incl. 0007_bug_reports.sql). */
   CMS_DB?: BugReportD1
   /** PRIVATE R2 bucket for raw report bundles. Never public, no r2.dev, no custom domain. */
   BUG_REPORTS?: BugReportBucket
@@ -161,7 +163,8 @@ export async function handleBugReport(request: Request, env: BugReportEnv, deps:
   const checked = checkBugReport(raw)
   if (!checked.ok) return fail(checked.error)
 
-  const db = env.CMS_DB
+  // Dedicated D1 first: binding CMS_DB on the public site would also switch on the public CMS content / comments APIs.
+  const db = env.BUG_REPORTS_DB ?? env.CMS_DB
   const bucket = env.BUG_REPORTS
   if (!db || !bucket) return fail('NOT_CONFIGURED')
 

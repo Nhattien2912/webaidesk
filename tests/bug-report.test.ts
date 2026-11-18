@@ -365,6 +365,30 @@ test('BR-ADMIN-01 admin endpoints require the same Cloudflare Access authorizati
   assert.equal(post.status, 405, 'read-only API')
 })
 
+test('BR-ADMIN-07 BUG_REPORTS_ADMIN_ENABLED opens only the read-only bug report admin while the CMS stays disabled', async () => {
+  await seed()
+  const only = adminEnv({ CMS_ADMIN_ENABLED: 'false', BUG_REPORTS_ADMIN_ENABLED: 'true' })
+  assert.equal((await admin('bug-reports', only)).status, 200, 'bug report list served')
+  assert.equal((await admin('bug-reports/BR-000001/bundle', only)).status, 200, 'bundle download served')
+  assert.equal((await admin('bug-reports', only, { token: null })).status, 401, 'still behind Access')
+  assert.equal((await admin('bug-reports', only, { method: 'POST' })).status, 405, 'still read-only')
+  for (const path of ['contents', 'comments', 'media', 'security/url-audit']) assert.equal((await admin(path, only)).status, 404, `${path} stays disabled`)
+  assert.equal((await admin('bug-reports', adminEnv({ CMS_ADMIN_ENABLED: 'false', BUG_REPORTS_ADMIN_ENABLED: 'false' }))).status, 404)
+  assert.equal((await admin('bug-reports', adminEnv({ CMS_ADMIN_ENABLED: 'false', BUG_REPORTS_ADMIN_ENABLED: 'true', ENVIRONMENT: 'development' }))).status, 404, 'environment rule unchanged')
+})
+
+test('BR-DB-01 a dedicated BUG_REPORTS_DB is preferred over CMS_DB by intake and admin', async () => {
+  const r = await send(report(), {}, { BUG_REPORTS_DB: db, BUG_REPORTS: bucket, IP_HASH_SALT: 'test-salt' })
+  assert.equal(r.status, 200, 'intake works with only BUG_REPORTS_DB (no CMS_DB on the public site)')
+  const { reportId } = await j(r)
+  assert.equal(await count('SELECT COUNT(*) c FROM bug_reports WHERE id = ?1', reportId), 1)
+  const list = await admin('bug-reports', adminEnv({ BUG_REPORTS_DB: db }))
+  assert.equal(list.status, 200)
+  const notConfigured = await send(report(), {}, { BUG_REPORTS: bucket })
+  assert.equal(notConfigured.status, 500)
+  assert.equal((await j(notConfigured)).error, 'NOT_CONFIGURED')
+})
+
 test('BR-ADMIN-02 list is newest first with filters by app version, channel, error code and worker', async () => {
   await seed()
   assert.deepEqual(await listIds(), ['BR-000004', 'BR-000003', 'BR-000002', 'BR-000001'])
