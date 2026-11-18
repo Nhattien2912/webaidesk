@@ -512,27 +512,77 @@ export async function uploadArtifacts(backend, steps, journal, log = console.log
 /**
  * The Owner types an exact phrase in an interactive terminal. Nothing else is accepted: no flag, no env, no piped stdin
  * (a worker/agent cannot "approve" by printing text into the pipeline's input).
+ * `readLine` resolves `null` when the input ends (EOF, stdin closed or errored, terminal gone) — the gate fails closed.
+ * Ctrl+C is left to Node's default SIGINT handling: the process exits before anything of the gated step starts.
+ * `isTTY` is re-read on every prompt so a terminal that goes away mid-gate is noticed.
  */
 export const terminalIo = () => ({
-  isTTY: !!process.stdin.isTTY && !!process.stdout.isTTY,
+  get isTTY() {
+    return !!process.stdin.isTTY && !!process.stdout.isTTY
+  },
   write: (s) => process.stdout.write(s),
-  readLine: () =>
-    new Promise((r) => {
-      const rl = createInterface({ input: process.stdin, terminal: false })
-      rl.once('line', (l) => {
-        rl.close()
-        r(l)
-      })
-    }),
+  readLine: () => (stdinReader ??= lineReader(process.stdin))(),
 })
+let stdinReader = null
 
+/**
+ * ONE line reader for the whole process (not one per gate): lines that arrive together (a paste with several newlines)
+ * are queued, never dropped, so every buffered line is judged by the next gate. The input is paused while nobody waits
+ * (it does not keep the process alive). After the input ends or errors every read resolves `null` at once.
+ */
+export function lineReader(input) {
+  const queue = []
+  const waiters = []
+  let ended = false
+  const rl = createInterface({ input, terminal: false })
+  rl.pause()
+  rl.on('line', (l) => {
+    const w = waiters.shift()
+    if (w) w(l)
+    else queue.push(l)
+    if (!waiters.length) rl.pause()
+  })
+  const end = () => {
+    ended = true
+    for (const w of waiters.splice(0)) w(null)
+  }
+  rl.on('close', end)
+  rl.on('error', end) // readline re-emits input errors on the interface
+  input.on('error', end)
+  return () => {
+    if (queue.length) return Promise.resolve(queue.shift())
+    if (ended) return Promise.resolve(null)
+    return new Promise((r) => {
+      waiters.push(r)
+      rl.resume()
+    })
+  }
+}
+
+/** Consecutive blank lines tolerated at one gate before it fails closed (a stuck key / runaway input, never an approval). */
+export const GATE_MAX_BLANK_LINES = 20
+
+/**
+ * One gate, one exact phrase. Blank / whitespace-only lines are never an approval: they are skipped and the prompt is shown
+ * again (stray Enter or a pasted trailing newline buffered while a long step ran). Any other non-matching line — including
+ * another gate's phrase — rejects immediately. Input end / lost TTY rejects. Surrounding whitespace (incl. a CR) is trimmed.
+ */
 export async function ownerGate({ name, phrase, summary, io }) {
   const t = io ?? terminalIo()
   t.write(`\n================ OWNER APPROVAL: ${name} ================\n${summary}\n\nType exactly:  ${phrase}\n> `)
-  if (!t.isTTY) throw new ReleaseError(name, 'approval must be typed by the Owner in an interactive terminal (stdin/stdout are not a TTY) — nothing was done')
-  const answer = await t.readLine()
-  if (String(answer ?? '').trim() !== phrase) throw new ReleaseError(name, 'approval phrase did not match — nothing was done')
-  return true
+  for (let blanks = 0; ; ) {
+    if (!t.isTTY) throw new ReleaseError(name, 'approval must be typed by the Owner in an interactive terminal (stdin/stdout are not a TTY) — nothing was done')
+    const answer = await t.readLine()
+    if (answer === null || answer === undefined) throw new ReleaseError(name, 'input ended before the approval was typed (EOF / terminal closed) — nothing was done')
+    const text = String(answer).trim()
+    if (text === '') {
+      if (++blanks > GATE_MAX_BLANK_LINES) throw new ReleaseError(name, `${GATE_MAX_BLANK_LINES} blank lines in a row — refusing (runaway input?) — nothing was done`)
+      t.write(`  (blank line ignored — type the phrase above)\n> `)
+      continue
+    }
+    if (text !== phrase) throw new ReleaseError(name, 'approval phrase did not match — nothing was done')
+    return true
+  }
 }
 
 // ---------------------------------------------------------------- network reads (read-only)

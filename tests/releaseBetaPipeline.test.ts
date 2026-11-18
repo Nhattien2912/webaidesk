@@ -7,7 +7,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 // @ts-expect-error plain ESM script without type declarations
-import { DEFAULTS, TARGETS, readAsarFiles, run, preflight, ReleaseError, detectAppTarget, resolveTarget, writeReleaseFileAtomic, readWithRetry } from '../scripts/release-beta.mjs'
+import { DEFAULTS, TARGETS, readAsarFiles, run, preflight, ReleaseError, detectAppTarget, resolveTarget, writeReleaseFileAtomic, readWithRetry, ownerGate, GATE_MAX_BLANK_LINES, lineReader } from '../scripts/release-beta.mjs'
+import { PassThrough } from 'node:stream'
 import { immutableKey } from '../server/releaseRecords.ts'
 
 const sha256 = (b: Uint8Array | string) => createHash('sha256').update(b).digest('hex')
@@ -158,7 +159,8 @@ function fakeWorld(fx: Fx, opts: { putFails?: string; putLandsThenThrows?: strin
   return { store, calls, backend, fetch, exec, git, state, opts }
 }
 
-const answers = (...lines: string[]) => ({ isTTY: true, write() {}, readLine: async () => lines.shift() ?? '' })
+// Exhausted answers = EOF (null): the gate fails closed (a blank line would only be skipped).
+const answers = (...lines: string[]) => ({ isTTY: true, write() {}, readLine: async () => (lines.length ? lines.shift()! : null) })
 const argsFor = (fx: Fx, extra: string[] = []) => [fx.version, '--target', fx.target, '--artifacts', fx.artifacts, '--unpacked', fx.unpacked, '--key', fx.keyPath, '--key-id', fx.keyId, ...extra]
 const depsFor = (fx: Fx, w: ReturnType<typeof fakeWorld>, more: Record<string, unknown> = {}) => ({ releasesFile: fx.releases, journalPath: fx.journal, gitState: w.git, fetch: w.fetch, backend: w.backend, exec: w.exec, distFingerprint: () => 'dist-1', authenticode: () => ({ status: 'NotSigned', signer: '' }), log: () => {}, ...more })
 const ph = (fx: Fx) => sha256(fx.installer).slice(0, 8)
@@ -480,7 +482,7 @@ test('gate summaries: PROMOTE on production carries the real-users warning (not 
   const capture = (fx: Fx) => {
     const lines = [`UPLOAD ${fx.target} ${fx.version} ${ph(fx)}`, `PUBLISH ${fx.target} ${fx.version} seq1 ${ph(fx)}`, `PROMOTE ${fx.target} ${fx.version} ${ph(fx)}`]
     const shown: string[] = []
-    return { shown, io: { isTTY: true, write: (s: string) => shown.push(s), readLine: async () => lines.shift() ?? '' } }
+    return { shown, io: { isTTY: true, write: (s: string) => shown.push(s), readLine: async () => (lines.length ? lines.shift()! : null) } }
   }
   const prod = fixture()
   const p = capture(prod)
@@ -494,4 +496,110 @@ test('gate summaries: PROMOTE on production carries the real-users warning (not 
   const s = capture(stg)
   await run(argsFor(stg, ['--release']), depsFor(stg, fakeWorld(stg), { io: s.io }))
   assert.doesNotMatch(s.shown.join('\n'), /AFFECTS REAL USERS/)
+})
+
+// ---------------------------------------------------------------- Owner gate input handling (stray blank lines)
+
+/** Scripted terminal: `script` items are lines (or null = EOF); `tty` may flip to simulate a lost terminal. */
+const gateIo = (script: Array<string | null>, ttyAfterReads?: number) => {
+  const shown: string[] = []
+  let reads = 0
+  return {
+    shown,
+    get reads() { return reads },
+    io: {
+      get isTTY() { return ttyAfterReads === undefined || reads < ttyAfterReads },
+      write: (s: string) => shown.push(s),
+      readLine: async () => { reads++; return script.length ? script.shift()! : null },
+    },
+  }
+}
+const GATE = { name: 'PUBLISH', phrase: 'PUBLISH production 0.5.0-beta.3 seq2 3a78fd9b', summary: 's' }
+
+test('ownerGate: blank / whitespace-only / CR-only lines are skipped and the prompt is shown again; the exact phrase is accepted', async () => {
+  const g = gateIo(['', '   ', '\r', '\t \r', 'PUBLISH production 0.5.0-beta.3 seq2 3a78fd9b\r'])
+  assert.equal(await ownerGate({ ...GATE, io: g.io }), true)
+  assert.equal(g.reads, 5)
+  assert.equal(g.shown.filter((s) => s.includes('blank line ignored')).length, 4, 'prompt re-shown once per blank line')
+  assert.ok(g.shown.every((s) => s.endsWith('> ') || s.endsWith('\n')))
+})
+
+test('ownerGate: any non-empty mismatch rejects at once (no further read) — vague words, partial, wrong seq/hash/target, another gate\'s phrase', async () => {
+  for (const wrong of ['yes', 'PUBLISH', 'PUBLISH production 0.5.0-beta.3 seq3 3a78fd9b', 'PUBLISH production 0.5.0-beta.3 seq2 deadbeef', 'PUBLISH staging 0.5.0-beta.3 seq2 3a78fd9b',
+    'UPLOAD production 0.5.0-beta.3 3a78fd9b', 'PROMOTE production 0.5.0-beta.3 3a78fd9b', 'publish production 0.5.0-beta.3 seq2 3a78fd9b']) {
+    const g = gateIo(['', wrong, GATE.phrase])
+    await assert.rejects(ownerGate({ ...GATE, io: g.io }), /PUBLISH FAILED[\s\S]*did not match[\s\S]*nothing was done/, wrong)
+    assert.equal(g.reads, 2, `${wrong}: the correct phrase queued after it is never read`)
+  }
+})
+
+test('ownerGate fails closed: EOF (null/undefined), EOF after blank lines, lost TTY before/mid gate, runaway blank lines', async () => {
+  await assert.rejects(ownerGate({ ...GATE, io: gateIo([null]).io }), /PUBLISH FAILED[\s\S]*input ended/)
+  await assert.rejects(ownerGate({ ...GATE, io: { isTTY: true, write() {}, readLine: async () => undefined } }), /input ended/)
+  await assert.rejects(ownerGate({ ...GATE, io: gateIo(['', '  ', null]).io }), /input ended/, 'blank lines then EOF')
+  const noTty = gateIo([GATE.phrase], 0)
+  await assert.rejects(ownerGate({ ...GATE, io: noTty.io }), /not a TTY/)
+  assert.equal(noTty.reads, 0, 'a non-interactive input is never even read')
+  const lost = gateIo(['', GATE.phrase], 1)
+  await assert.rejects(ownerGate({ ...GATE, io: lost.io }), /not a TTY/, 'terminal gone after a blank line → the queued phrase is not read')
+  assert.equal(lost.reads, 1)
+  const flood = gateIo([...Array(GATE_MAX_BLANK_LINES + 1).fill(''), GATE.phrase])
+  await assert.rejects(ownerGate({ ...GATE, io: flood.io }), /blank lines in a row/)
+  assert.equal(flood.reads, GATE_MAX_BLANK_LINES + 1)
+  assert.equal(await ownerGate({ ...GATE, io: gateIo([...Array(GATE_MAX_BLANK_LINES).fill(''), GATE.phrase]).io }), true, 'exactly the limit is still fine')
+})
+
+test('release: blank lines buffered before UPLOAD and between PUBLISH and PROMOTE (pasted newline / stray Enter during check+deploy) → each gate still needs its own phrase; release completes once', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const io = answers('', `UPLOAD ${fx.target} ${fx.version} ${ph(fx)}`, '\r', `PUBLISH ${fx.target} ${fx.version} seq1 ${ph(fx)}`, '', '  ', '\r', `PROMOTE ${fx.target} ${fx.version} ${ph(fx)}`)
+  const r = await run(argsFor(fx, ['--release']), depsFor(fx, w, { io }))
+  assert.equal(r.ok, true)
+  assert.equal(w.calls.exec.filter((c) => c.includes('deploy') && c.includes('main')).length, 1, 'exactly one production deploy')
+  assert.equal(journalOf(fx).steps.productionDeploy.state, 'done')
+})
+
+test('release: blank lines then EOF at PROMOTE → PROMOTE FAILED, preview only, production never deployed, no productionDeploy step', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const io = answers(`UPLOAD ${fx.target} ${fx.version} ${ph(fx)}`, `PUBLISH ${fx.target} ${fx.version} seq1 ${ph(fx)}`, '', '   ')
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io })), /PROMOTE FAILED[\s\S]*input ended/)
+  assert.ok(!w.calls.exec.some((c) => c.includes('deploy') && c.includes('main')), 'no production deploy')
+  assert.equal(w.state.deployed, false)
+  assert.equal(journalOf(fx).steps.previewDeploy.state, 'done')
+  assert.equal(journalOf(fx).steps.productionDeploy, undefined)
+})
+
+test('release: an UPLOAD phrase repeated into the PUBLISH gate, or the PUBLISH phrase into PROMOTE, never approves the next step', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const upload = `UPLOAD ${fx.target} ${fx.version} ${ph(fx)}`
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io: answers(upload, '', upload) })), /PUBLISH FAILED[\s\S]*did not match/)
+  assert.ok(!w.calls.put.some((k) => k.endsWith('components.json')), 'nothing published')
+  assert.ok(!w.calls.exec.some((c) => c.includes('deploy')), 'nothing deployed')
+  const fx2 = fixture()
+  const w2 = fakeWorld(fx2)
+  const publish = `PUBLISH ${fx2.target} ${fx2.version} seq1 ${ph(fx2)}`
+  await assert.rejects(run(argsFor(fx2, ['--release']), depsFor(fx2, w2, { io: answers(`UPLOAD ${fx2.target} ${fx2.version} ${ph(fx2)}`, publish, '', publish) })), /PROMOTE FAILED[\s\S]*did not match/)
+  assert.ok(!w2.calls.exec.some((c) => c.includes('deploy') && c.includes('main')), 'production never deployed')
+})
+
+test('lineReader (real terminal input path): several lines in one chunk are queued, none dropped; EOF / stream error → null forever', async () => {
+  const input = new PassThrough()
+  const read = lineReader(input)
+  input.write('UPLOAD production 0.5.0-beta.3 3a78fd9b\r\n\r\nPUBLISH production 0.5.0-beta.3 seq2 3a78fd9b\r\n')
+  assert.equal(await read(), 'UPLOAD production 0.5.0-beta.3 3a78fd9b')
+  assert.equal(await read(), '', 'the buffered blank line reaches the next gate (which skips it)')
+  assert.equal(await read(), 'PUBLISH production 0.5.0-beta.3 seq2 3a78fd9b')
+  const pending = read()
+  input.end()
+  assert.equal(await pending, null, 'a read waiting at EOF resolves null')
+  assert.equal(await read(), null)
+  assert.equal(await read(), null, 'stays null — a gate after EOF fails closed instead of hanging')
+  const broken = new PassThrough()
+  const readBroken = lineReader(broken)
+  const waiting = readBroken()
+  broken.destroy(new Error('terminal gone'))
+  assert.equal(await waiting, null, 'stream error → null')
+  assert.equal(await readBroken(), null)
 })
