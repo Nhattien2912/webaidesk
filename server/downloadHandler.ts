@@ -31,6 +31,8 @@ export interface R2BucketLike {
 
 export interface DownloadEnv {
   RELEASES?: R2BucketLike
+  /** "staging" only on the staging Pages project (server/releaseTarget.ts); unset on production. */
+  RELEASE_TARGET?: string
   /** Server-side mirror of VITE_ALLOW_UNSIGNED_DOWNLOAD. Unsigned stays blocked unless exactly "true". */
   ALLOW_UNSIGNED_DOWNLOAD?: string
 }

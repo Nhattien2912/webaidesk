@@ -18,7 +18,8 @@
 //     available for differential downloads); R2 objects must match size + SHA-256.
 //   * Portable builds are never part of the feed.
 
-import { COMPONENT_RECORDS, RELEASE_RECORDS } from './releaseCatalog.ts'
+import { COMPONENT_RECORDS, RELEASE_RECORDS, STAGING_COMPONENT_RECORDS, STAGING_RELEASE_RECORDS } from './releaseCatalog.ts'
+import { selectReleaseTarget } from './releaseTarget.ts'
 import { COMPONENTS_FILE, currentComponents, EXTENSION_PACKAGE, findExtensionPackage, type ComponentRecord } from './componentRecords.ts'
 import { serveObject, type DownloadEnv, type R2BucketLike } from './downloadHandler.ts'
 import {
@@ -39,7 +40,7 @@ export interface UpdateDeps {
 
 const UPDATE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.exe(\.blockmap)?$/
 
-type UpdateError = 'method_not_allowed' | 'unknown_channel' | 'invalid_filename' | 'not_found' | 'no_release' | 'not_configured' | 'release_unavailable' | 'integrity_mismatch' | 'storage_error'
+type UpdateError = 'method_not_allowed' | 'unknown_channel' | 'invalid_filename' | 'not_found' | 'no_release' | 'not_configured' | 'release_unavailable' | 'integrity_mismatch' | 'storage_error' | 'target_mismatch'
 const STATUS: Record<UpdateError, number> = {
   method_not_allowed: 405,
   unknown_channel: 404,
@@ -50,6 +51,7 @@ const STATUS: Record<UpdateError, number> = {
   release_unavailable: 503,
   integrity_mismatch: 503,
   storage_error: 502,
+  target_mismatch: 503,
 }
 
 function fail(error: UpdateError, extra: Record<string, string> = {}): Response {
@@ -145,9 +147,17 @@ export async function handleUpdate(
   env: DownloadEnv,
   channelParam: string | string[] | undefined,
   fileParam: string | string[] | undefined,
-  deps: UpdateDeps = { records: RELEASE_RECORDS },
+  explicitDeps?: UpdateDeps,
 ): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') return fail('method_not_allowed', { allow: 'GET, HEAD' })
+  // Catalog of this deployment's target (server/releaseTarget.ts): production unless the project is the staging one AND the
+  // request reached a staging host. A mismatch is refused instead of serving the other environment's releases.
+  let deps = explicitDeps
+  if (!deps) {
+    const target = selectReleaseTarget(env.RELEASE_TARGET, new URL(request.url).hostname)
+    if (!target.ok) return fail('target_mismatch')
+    deps = target.target === 'staging' ? { records: STAGING_RELEASE_RECORDS, components: STAGING_COMPONENT_RECORDS } : { records: RELEASE_RECORDS, components: COMPONENT_RECORDS }
+  }
   const channel = one(channelParam)
   if (!(RELEASE_CHANNELS as readonly string[]).includes(channel)) return fail('unknown_channel')
   const file = one(fileParam)

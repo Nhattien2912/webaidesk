@@ -7,6 +7,7 @@
 // R2 object matches the recorded size and SHA-256.
 
 import { RELEASE_DATA } from './releaseData.ts'
+import { RELEASE_DATA_STAGING } from './releaseDataStaging.ts'
 import { checkCatalog, currentRelease, DEFAULT_CHANNEL, type ReleaseRecord } from './releaseRecords.ts'
 import { checkComponents, type ComponentRecord } from './componentRecords.ts'
 
@@ -69,6 +70,13 @@ const checkedComponents = checkComponents((RELEASE_DATA as { components?: unknow
 export const COMPONENT_RECORDS: readonly ComponentRecord[] = checkedComponents.valid
 /** Problems found in server/releaseData.ts (tests assert this is empty). */
 export const RELEASE_FILE_ERRORS: readonly string[] = [...checked.errors, ...checkedComponents.errors]
+
+// STAGING (QA) feed catalog — only ever served by the staging project (server/releaseTarget.ts).
+const checkedStaging = checkCatalog(RELEASE_DATA_STAGING)
+const checkedStagingComponents = checkComponents((RELEASE_DATA_STAGING as { components?: unknown } | null)?.components)
+export const STAGING_RELEASE_RECORDS: readonly ReleaseRecord[] = checkedStaging.valid
+export const STAGING_COMPONENT_RECORDS: readonly ComponentRecord[] = checkedStagingComponents.valid
+export const STAGING_RELEASE_FILE_ERRORS: readonly string[] = [...checkedStaging.errors, ...checkedStagingComponents.errors]
 
 /** All download entries; handleDownload still re-checks status/approval/signature per request. */
 export const RELEASE_CATALOG: readonly ReleaseEntry[] = RELEASE_RECORDS.flatMap(entriesForRecord)
