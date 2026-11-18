@@ -632,6 +632,22 @@ function summaryOf(ctx) {
   ].join('\n')
 }
 
+/** Banner shown before PROMOTE on the production target: this step reaches REAL users. Empty for staging. */
+export function productionWarning(target, ctx) {
+  if (target.name !== 'production') return ''
+  const from = ctx.live?.ok ? ctx.live.version ?? 'no release' : 'unknown'
+  return [
+    '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+    '!!  PRODUCTION RELEASE — AFFECTS REAL USERS',
+    `!!  After this step ${target.feedOrigin}/api/updates/${ctx.channel}/ offers ${ctx.record.version} (currently ${from}).`,
+    `!!  Every AI Desk install on the ${ctx.channel} channel will be offered this update automatically`,
+    '!!  (download in the background; install after the user agrees or at a proven-safe point).',
+    '!!  Rollback = sign a NEW manifest that withdraws this version + release.mjs withdraw + deploy.',
+    '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+    '',
+  ].join('\n')
+}
+
 /** Live feed state. ok=false = could not be determined (network / 5xx / target_mismatch) — release mode refuses then. */
 export async function readLiveFeed(origin, channel, get) {
   try {
@@ -781,6 +797,7 @@ export async function run(argv, deps = {}) {
     await uploadArtifacts(backend, steps, journal, log)
     journal.step('upload', { state: 'done' })
     log(`[4/7] UPLOAD ok`)
+    ctx.remote = await remoteState(backend, steps) // the PUBLISH summary shows the state AFTER the upload, not the stale pre-upload view
 
     // 5. PUBLISH — components.json, catalog, check, PREVIEW deploy + endpoint check
     await ownerGate({ name: 'PUBLISH', phrase: `PUBLISH ${target.name} ${version} seq${plan.components.sequence} ${phraseHash}`, summary: `${summaryOf(ctx)}\n\nNext: upload components.json, write ${target.releasesFile.replace(ROOT, '.')}, npm run check, deploy a PREVIEW of ${target.pagesProject} and verify it (its production untouched).`, io })
@@ -811,7 +828,7 @@ export async function run(argv, deps = {}) {
     log(`[5/7] PUBLISH staged + preview verified at ${previewUrl}`)
 
     // 6. PROMOTE
-    await ownerGate({ name: 'PROMOTE', phrase: `PROMOTE ${target.name} ${version} ${phraseHash}`, summary: `TARGET ${target.name.toUpperCase()}: preview ${previewUrl} serves ${version} (latest.yml + signed components.json + installer ranges verified).\nNext: deploy ${target.pagesProject} branch ${target.productionBranch} (dashboard bindings, no --config) → ${target.feedOrigin}.`, io })
+    await ownerGate({ name: 'PROMOTE', phrase: `PROMOTE ${target.name} ${version} ${phraseHash}`, summary: `${productionWarning(target, ctx)}TARGET ${target.name.toUpperCase()}: preview ${previewUrl} serves ${version} (latest.yml + signed components.json + installer ranges verified).\nNext: deploy ${target.pagesProject} branch ${target.productionBranch} (dashboard bindings, no --config) → ${target.feedOrigin}.`, io })
     if ((deps.distFingerprint ?? distFingerprint)() !== fingerprint) throw new ReleaseError('PROMOTE', 'dist-public changed since the verified preview — refusing to deploy something that was not verified')
     journal.step('productionDeploy', { state: 'started' })
     const prod = exec('npx', ['wrangler', 'pages', 'deploy', 'dist-public', '--project-name', target.pagesProject, '--branch', target.productionBranch])

@@ -475,3 +475,23 @@ test('read-only feed checks wait (bounded) for network errors only; an HTTP answ
   assert.equal(m, 1, 'an HTTP response (even 404 / wrong content) is returned at once')
   await assert.rejects(readWithRetry(async () => { throw new Error('down') }, 'https://x', undefined, { attempts: 3, sleep: async () => {} }), /VERIFY-READ FAILED[\s\S]*after 3 attempts[\s\S]*nothing was changed/)
 })
+
+test('gate summaries: PROMOTE on production carries the real-users warning (not on staging); PUBLISH shows the post-upload remote state', async () => {
+  const capture = (fx: Fx) => {
+    const lines = [`UPLOAD ${fx.target} ${fx.version} ${ph(fx)}`, `PUBLISH ${fx.target} ${fx.version} seq1 ${ph(fx)}`, `PROMOTE ${fx.target} ${fx.version} ${ph(fx)}`]
+    const shown: string[] = []
+    return { shown, io: { isTTY: true, write: (s: string) => shown.push(s), readLine: async () => lines.shift() ?? '' } }
+  }
+  const prod = fixture()
+  const p = capture(prod)
+  await run(argsFor(prod, ['--release']), depsFor(prod, fakeWorld(prod), { io: p.io }))
+  const promote = p.shown.find((s) => s.includes('OWNER APPROVAL: PROMOTE'))!
+  assert.match(promote, /PRODUCTION RELEASE — AFFECTS REAL USERS/)
+  assert.match(promote, /offers 0\.5\.0-beta\.3 \(currently 0\.5\.0-beta\.2\)/)
+  const publish = p.shown.find((s) => s.includes('OWNER APPROVAL: PUBLISH'))!
+  assert.match(publish, /remote state +AI-Desk-Setup-0\.5\.0-beta\.3\.exe=identical/, 'post-upload state, not the stale "absent"')
+  const stg = fixture('0.5.0-beta.3', { target: 'staging', releases: [] })
+  const s = capture(stg)
+  await run(argsFor(stg, ['--release']), depsFor(stg, fakeWorld(stg), { io: s.io }))
+  assert.doesNotMatch(s.shown.join('\n'), /AFFECTS REAL USERS/)
+})
