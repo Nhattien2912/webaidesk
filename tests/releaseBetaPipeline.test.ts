@@ -603,3 +603,111 @@ test('lineReader (real terminal input path): several lines in one chunk are queu
   assert.equal(await waiting, null, 'stream error → null')
   assert.equal(await readBroken(), null)
 })
+
+// ---------------------------------------------------------------- buffered / pasted-ahead approvals never open a future gate
+
+/**
+ * Real lineReader over a stream + a simulated Owner who types `typed(phrase)` only AFTER the prompt appeared (delay > the
+ * stale-settle window). Lines written to `input` before a gate opens model typed-ahead / pasted input.
+ */
+const SETTLE = 20
+const liveTerminal = (typed: (phrase: string) => string | null = (p) => `${p}\n`, delayMs = 60) => {
+  const input = new PassThrough()
+  const read = lineReader(input)
+  const shown: string[] = []
+  const io = {
+    isTTY: true,
+    write: (s: string) => {
+      shown.push(s)
+      const m = /Type exactly: {2}(.+)\n> $/.exec(s)
+      if (m) {
+        const line = typed(m[1]!)
+        if (line !== null) setTimeout(() => input.write(line), delayMs)
+      }
+    },
+    readLine: () => read(),
+    drainStale: () => read.drain(SETTLE),
+  }
+  return { input, io, shown }
+}
+
+test('lineReader.drain: returns + removes everything typed before now (incl. OS-buffered data pulled during the settle window); later lines are fresh', async () => {
+  const input = new PassThrough()
+  const read = lineReader(input)
+  input.write('A\r\n\r\nB\r\n')
+  assert.deepEqual(await read.drain(SETTLE), ['A', '', 'B'])
+  assert.deepEqual(await read.drain(SETTLE), [], 'nothing left')
+  setTimeout(() => input.write('C\n'), 40)
+  assert.equal(await read(), 'C', 'a line typed after the drain is read normally')
+  input.end('tail\n')
+  assert.deepEqual(await read.drain(SETTLE), ['tail'])
+  assert.equal(await read(), null)
+})
+
+test('ownerGate: a non-empty line buffered before the gate opened rejects it — even the CORRECT phrase; buffered blanks alone are ignored', async () => {
+  for (const stale of [[GATE.phrase], ['', GATE.phrase], ['UPLOAD production 0.5.0-beta.3 3a78fd9b'], ['  x  ']]) {
+    let reads = 0
+    const io = { isTTY: true, write() {}, drainStale: async () => [...stale], readLine: async () => { reads++; return GATE.phrase } }
+    await assert.rejects(ownerGate({ ...GATE, io }), /PUBLISH FAILED[\s\S]*BEFORE this gate opened[\s\S]*nothing was done/, JSON.stringify(stale))
+    assert.equal(reads, 0, 'the gate never even reads a fresh line after buffered content')
+  }
+  const blanksOnly = { isTTY: true, write() {}, drainStale: async () => ['', '   ', '\r'], readLine: async () => GATE.phrase }
+  assert.equal(await ownerGate({ ...GATE, io: blanksOnly }), true)
+  const flood = { isTTY: true, write() {}, drainStale: async () => Array(GATE_MAX_BLANK_LINES * 5 + 1).fill(''), readLine: async () => GATE.phrase }
+  await assert.rejects(ownerGate({ ...GATE, io: flood }), /buffered before this gate opened/)
+  const noTty = { isTTY: false, write() {}, drainStale: async () => { throw new Error('must not drain without a TTY') }, readLine: async () => GATE.phrase }
+  await assert.rejects(ownerGate({ ...GATE, io: noTty }), /not a TTY/)
+})
+
+test('release (live terminal): each gate typed after it opens → release completes, one production deploy', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const t = liveTerminal()
+  const r = await run(argsFor(fx, ['--release']), depsFor(fx, w, { io: t.io }))
+  assert.equal(r.ok, true)
+  assert.equal(w.calls.exec.filter((c) => c.includes('deploy') && c.includes('main')).length, 1)
+})
+
+test('release (live terminal): UPLOAD + PUBLISH + PROMOTE pasted BEFORE the first gate → UPLOAD FAILED, nothing uploaded or deployed', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const t = liveTerminal(() => null)
+  t.input.write(`UPLOAD ${fx.target} ${fx.version} ${ph(fx)}\r\nPUBLISH ${fx.target} ${fx.version} seq1 ${ph(fx)}\r\nPROMOTE ${fx.target} ${fx.version} ${ph(fx)}\r\n`)
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io: t.io })), /UPLOAD FAILED[\s\S]*BEFORE this gate opened/)
+  assert.deepEqual(w.calls.put, [])
+  assert.ok(!w.calls.exec.some((c) => c.includes('deploy')))
+})
+
+test('release (live terminal): multi-line paste at UPLOAD (UPLOAD + PUBLISH + PROMOTE in one chunk) → UPLOAD ok, PUBLISH refuses the queued lines; nothing published', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const all = `UPLOAD ${fx.target} ${fx.version} ${ph(fx)}\r\nPUBLISH ${fx.target} ${fx.version} seq1 ${ph(fx)}\r\nPROMOTE ${fx.target} ${fx.version} ${ph(fx)}\r\n`
+  const t = liveTerminal((p) => (p.startsWith('UPLOAD') ? all : null))
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io: t.io })), /PUBLISH FAILED[\s\S]*BEFORE this gate opened/)
+  assert.ok(!w.calls.put.some((k) => k.endsWith('components.json')), 'components never uploaded')
+  assert.ok(!w.calls.exec.some((c) => c.includes('deploy')), 'nothing deployed')
+})
+
+test('release (live terminal): PROMOTE typed ahead while check/preview ran → PROMOTE FAILED, production never deployed; typed-ahead BLANK lines alone are harmless', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const t = liveTerminal((p) => (p.startsWith('PROMOTE') ? null : `${p}\n`))
+  const exec = (cmd: string, args: string[]) => {
+    if (args.includes('check')) t.input.write(`PROMOTE ${fx.target} ${fx.version} ${ph(fx)}\r\n`)
+    return w.exec(cmd, args)
+  }
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io: t.io, exec })), /PROMOTE FAILED[\s\S]*BEFORE this gate opened/)
+  assert.ok(!w.calls.exec.some((c) => c.includes('deploy') && c.includes('main')), 'no production deploy')
+  assert.equal(journalOf(fx).steps.productionDeploy, undefined)
+
+  const fx2 = fixture()
+  const w2 = fakeWorld(fx2)
+  const t2 = liveTerminal()
+  const exec2 = (cmd: string, args: string[]) => {
+    if (args.includes('check')) t2.input.write('\r\n\r\n   \r\n')
+    return w2.exec(cmd, args)
+  }
+  const r = await run(argsFor(fx2, ['--release']), depsFor(fx2, w2, { io: t2.io, exec: exec2 }))
+  assert.equal(r.ok, true, 'stray Enter presses during the wait do not block the release')
+  assert.equal(w2.calls.exec.filter((c) => c.includes('deploy') && c.includes('main')).length, 1)
+})

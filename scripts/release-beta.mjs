@@ -516,31 +516,41 @@ export async function uploadArtifacts(backend, steps, journal, log = console.log
  * Ctrl+C is left to Node's default SIGINT handling: the process exits before anything of the gated step starts.
  * `isTTY` is re-read on every prompt so a terminal that goes away mid-gate is noticed.
  */
-export const terminalIo = () => ({
-  get isTTY() {
-    return !!process.stdin.isTTY && !!process.stdout.isTTY
-  },
-  write: (s) => process.stdout.write(s),
-  readLine: () => (stdinReader ??= lineReader(process.stdin))(),
-})
+export const terminalIo = () => {
+  const reader = () => (stdinReader ??= lineReader(process.stdin))
+  return {
+    get isTTY() {
+      return !!process.stdin.isTTY && !!process.stdout.isTTY
+    },
+    write: (s) => process.stdout.write(s),
+    readLine: () => reader()(),
+    drainStale: () => reader().drain(),
+  }
+}
 let stdinReader = null
+
+/** How long a gate keeps pulling already-buffered input after its prompt is shown; all of it counts as typed AHEAD. */
+export const GATE_STALE_SETTLE_MS = 300
 
 /**
  * ONE line reader for the whole process (not one per gate): lines that arrive together (a paste with several newlines)
- * are queued, never dropped, so every buffered line is judged by the next gate. The input is paused while nobody waits
- * (it does not keep the process alive). After the input ends or errors every read resolves `null` at once.
+ * are queued, never dropped. The input is paused while nobody waits (it does not keep the process alive). After the
+ * input ends or errors every read resolves `null` at once.
+ * `read.drain(ms)` = everything that was typed BEFORE now: it resumes the input for `ms` so data buffered by the OS /
+ * console while the pipeline was busy (or before it started) is pulled in, and returns + removes all queued lines.
  */
 export function lineReader(input) {
   const queue = []
   const waiters = []
   let ended = false
+  let draining = false
   const rl = createInterface({ input, terminal: false })
   rl.pause()
   rl.on('line', (l) => {
     const w = waiters.shift()
     if (w) w(l)
     else queue.push(l)
-    if (!waiters.length) rl.pause()
+    if (!waiters.length && !draining && !ended) rl.pause()
   })
   const end = () => {
     ended = true
@@ -549,7 +559,7 @@ export function lineReader(input) {
   rl.on('close', end)
   rl.on('error', end) // readline re-emits input errors on the interface
   input.on('error', end)
-  return () => {
+  const read = () => {
     if (queue.length) return Promise.resolve(queue.shift())
     if (ended) return Promise.resolve(null)
     return new Promise((r) => {
@@ -557,19 +567,37 @@ export function lineReader(input) {
       rl.resume()
     })
   }
+  read.drain = async (ms = GATE_STALE_SETTLE_MS) => {
+    if (!ended) {
+      draining = true
+      rl.resume()
+      await new Promise((r) => setTimeout(r, ms))
+      draining = false
+      if (!waiters.length && !ended) rl.pause() // never touch a closed interface (EOF during the settle window)
+    }
+    return queue.splice(0)
+  }
+  return read
 }
 
 /** Consecutive blank lines tolerated at one gate before it fails closed (a stuck key / runaway input, never an approval). */
 export const GATE_MAX_BLANK_LINES = 20
 
 /**
- * One gate, one exact phrase. Blank / whitespace-only lines are never an approval: they are skipped and the prompt is shown
- * again (stray Enter or a pasted trailing newline buffered while a long step ran). Any other non-matching line — including
- * another gate's phrase — rejects immediately. Input end / lost TTY rejects. Surrounding whitespace (incl. a CR) is trimmed.
+ * One gate, one exact phrase, typed AFTER this gate opened. On opening, everything already buffered (typed or pasted ahead:
+ * during a long step, before the pipeline started, or extra lines of a multi-line paste at an earlier gate) is drained:
+ * blank lines in it are ignored, ANY non-empty line in it rejects the gate — even the correct phrase is never accepted from
+ * the buffer, so one paste can never approve future gates. Then: blank / whitespace-only lines are skipped and the prompt
+ * is shown again (bounded); any other non-matching line — including another gate's phrase — rejects immediately; input
+ * end / lost TTY rejects. Surrounding whitespace (incl. a CR) is trimmed.
  */
 export async function ownerGate({ name, phrase, summary, io }) {
   const t = io ?? terminalIo()
   t.write(`\n================ OWNER APPROVAL: ${name} ================\n${summary}\n\nType exactly:  ${phrase}\n> `)
+  if (!t.isTTY) throw new ReleaseError(name, 'approval must be typed by the Owner in an interactive terminal (stdin/stdout are not a TTY) — nothing was done')
+  const stale = t.drainStale ? await t.drainStale() : []
+  if (stale.length > GATE_MAX_BLANK_LINES * 5) throw new ReleaseError(name, `${stale.length} lines were buffered before this gate opened — refusing (runaway input?) — nothing was done`)
+  if (stale.some((l) => String(l).trim() !== '')) throw new ReleaseError(name, 'input typed BEFORE this gate opened (buffered / pasted ahead) is never an approval — nothing was done; rerun and type the phrase after the prompt appears')
   for (let blanks = 0; ; ) {
     if (!t.isTTY) throw new ReleaseError(name, 'approval must be typed by the Owner in an interactive terminal (stdin/stdout are not a TTY) — nothing was done')
     const answer = await t.readLine()
