@@ -7,7 +7,8 @@
 //
 //   node scripts/release.mjs inspect  --dir <electron-builder output dir> [--portable <file.exe>]
 //   node scripts/release.mjs stage    --dir <dir> [--portable <file.exe>] --account-id <id> [--aws-profile r2] [--execute] [--write]
-//   node scripts/release.mjs approve  --version <semver> [--write]
+//   node scripts/release.mjs approve  --version <semver> [--feed-only] [--write]
+//            --feed-only: approve an UNSIGNED build for the update feed only (trusted through the Ed25519 components manifest)
 //   node scripts/release.mjs publish  --version <semver> [--write]
 //   node scripts/release.mjs withdraw --version <semver> [--write]      (rollback: previous published release becomes current)
 //   node scripts/release.mjs status
@@ -127,6 +128,8 @@ export async function inspectBuild({ dir, portable, channel = 'stable', minOs = 
   if (!yml.version) problems.push('latest.yml has no version')
   if (!file0?.url || !file0.sha512 || !file0.size) problems.push('latest.yml files[0] must have url, sha512 and size')
   if (file0 && (yml.path !== file0.url || yml.sha512 !== file0.sha512)) problems.push('latest.yml path/sha512 do not match files[0]')
+  // The release label (file name) must carry the version electron-builder stamped into latest.yml / the app (single source: AI-Desk package.json).
+  if (yml.version && file0?.url && !file0.url.includes(yml.version)) problems.push(`installer ${file0.url} does not carry latest.yml version ${yml.version} (version/label mismatch)`)
   const installerPath = file0?.url ? join(dir, file0.url) : ''
   const blockmapPath = `${installerPath}.blockmap`
   if (!installerPath || !existsSync(installerPath)) problems.push(`missing installer ${file0?.url ?? '(none)'}`)
@@ -190,18 +193,20 @@ export async function inspectBuild({ dir, portable, channel = 'stable', minOs = 
 // ---------------------------------------------------------------- transitions
 
 /** Pure status transition on a release file. Returns { file, changes } or throws. */
-export function applyTransition(file, op, version, channel = 'stable') {
+export function applyTransition(file, op, version, channel = 'stable', { feedOnly = false } = {}) {
   const next = structuredClone(file)
   const r = next.releases.find((x) => x.channel === channel && x.version === version)
   if (!r) throw new Error(`no release ${channel}/${version}`)
   if (op === 'approve') {
     if (r.status !== 'staged') throw new Error(`only staged releases can be approved (is ${r.status})`)
-    if (r.signature !== 'signed') throw new Error('unsigned builds cannot be approved for public release')
+    if (feedOnly && r.signature === 'signed') throw new Error('--feed-only is only for unsigned builds')
+    if (r.signature !== 'signed' && !feedOnly) throw new Error('unsigned builds cannot be approved for public release (use --feed-only to approve it for the signed update feed only)')
+    if (feedOnly) r.updateTrust = 'feed-only'
     r.approved = true
   } else if (op === 'publish') {
     if (r.status !== 'staged') throw new Error(`only staged releases can be published (is ${r.status})`)
     if (!r.approved) throw new Error('approve before publishing')
-    if (r.signature !== 'signed') throw new Error('unsigned builds cannot be published')
+    if (r.signature !== 'signed' && r.updateTrust !== 'feed-only') throw new Error('unsigned builds cannot be published')
     r.status = 'published'
   } else if (op === 'withdraw') {
     if (r.status === 'withdrawn') throw new Error('already withdrawn')
@@ -310,7 +315,8 @@ async function main() {
   }
   if (cmd === 'approve' || cmd === 'publish' || cmd === 'withdraw') {
     if (!opts.version) throw new Error('--version is required')
-    const { file: next, changes } = applyTransition(file, cmd, opts.version, channel)
+    if (opts['feed-only'] && cmd !== 'approve') throw new Error('--feed-only applies to approve only')
+    const { file: next, changes } = applyTransition(file, cmd, opts.version, channel, { feedOnly: opts['feed-only'] === true })
     console.log(`${cmd} ${channel}/${opts.version}: current release ${changes.currentBefore ?? 'none'} -> ${changes.currentAfter ?? 'none'}`)
     save(next)
     return

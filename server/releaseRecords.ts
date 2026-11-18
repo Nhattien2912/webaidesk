@@ -10,7 +10,8 @@
 
 import { BETA_ARCHIVE_TARGET } from './archivePolicy.ts'
 
-export const RELEASE_CHANNELS = ['stable'] as const
+// beta = prerelease channel for opted-in testers; the website download and DEFAULT_CHANNEL stay on stable.
+export const RELEASE_CHANNELS = ['stable', 'beta'] as const
 export type ReleaseChannel = (typeof RELEASE_CHANNELS)[number]
 export const DEFAULT_CHANNEL: ReleaseChannel = 'stable'
 export const UPDATE_METADATA_FILE = 'latest.yml'
@@ -48,6 +49,12 @@ export interface ReleaseRecord {
   notesUrl?: string
   signature: 'signed' | 'unsigned'
   signer?: string
+  /**
+   * Owner opt-in for an UNSIGNED (no Authenticode) build to be offered by the update feed. The desktop then trusts it only
+   * through the offline Ed25519 components manifest, which pins version + installer name + SHA-512 (AI Desk "feed-only"
+   * trust). Set exclusively by `release.mjs approve --feed-only`; the website download policy is unchanged.
+   */
+  updateTrust?: 'feed-only'
   status: RecordStatus
   approved: boolean
   artifacts: {
@@ -132,7 +139,7 @@ function checkArchive(raw: unknown, version: string): string[] {
 export function validateRecord(raw: unknown): string[] {
   if (!isRecordObj(raw)) return ['record is not an object']
   const errors: string[] = []
-  const { version, channel, releasedAt, minOs, status, approved, signature, artifacts, commit, notesUrl } = raw
+  const { version, channel, releasedAt, minOs, status, approved, signature, artifacts, commit, notesUrl, updateTrust } = raw
   if (typeof version !== 'string' || !SEMVER.test(version)) errors.push('version is not semver')
   if (typeof channel !== 'string' || !(RELEASE_CHANNELS as readonly string[]).includes(channel)) errors.push('unknown channel')
   if (typeof releasedAt !== 'string' || Number.isNaN(Date.parse(releasedAt))) errors.push('releasedAt invalid')
@@ -141,6 +148,8 @@ export function validateRecord(raw: unknown): string[] {
   if (typeof approved !== 'boolean') errors.push('approved must be boolean')
   if (signature !== 'signed' && signature !== 'unsigned') errors.push('signature invalid')
   if (status === 'published' && approved !== true) errors.push('published without approval')
+  if (updateTrust !== undefined && updateTrust !== 'feed-only') errors.push('updateTrust invalid')
+  if (updateTrust === 'feed-only' && signature !== 'unsigned') errors.push('updateTrust feed-only is only for unsigned builds')
   if (commit !== undefined && (typeof commit !== 'string' || !/^[a-f0-9]{7,40}$/.test(commit))) errors.push('commit invalid')
   if (notesUrl !== undefined && (typeof notesUrl !== 'string' || !notesUrl.startsWith('https://'))) errors.push('notesUrl must be https')
   if (!isRecordObj(artifacts)) return [...errors, 'artifacts missing']
@@ -198,13 +207,19 @@ export function checkCatalog(file: unknown): CatalogCheck {
 }
 
 export interface ServePolicy {
-  /** Website download only: mirror of ALLOW_UNSIGNED_DOWNLOAD. The update feed never serves unsigned builds. */
+  /** Website download only: mirror of ALLOW_UNSIGNED_DOWNLOAD. The update feed never uses it. */
   allowUnsigned?: boolean
+  /** Update feed only: also serve unsigned records the Owner approved with updateTrust 'feed-only'. */
+  allowFeedOnly?: boolean
 }
 
 export function isServable(r: ReleaseRecord, policy: ServePolicy = {}): boolean {
-  return r.status === 'published' && r.approved === true && (r.signature === 'signed' || policy.allowUnsigned === true)
+  const trusted = r.signature === 'signed' || policy.allowUnsigned === true || (policy.allowFeedOnly === true && r.updateTrust === 'feed-only')
+  return r.status === 'published' && r.approved === true && trusted
 }
+
+/** Serve policy of the desktop update feed: signed builds, plus unsigned builds explicitly approved as feed-only. */
+export const UPDATE_FEED_POLICY: ServePolicy = Object.freeze({ allowFeedOnly: true })
 
 /** The current release of a channel: highest semver among servable records. Website and updater share it. */
 export function currentRelease(records: readonly ReleaseRecord[], channel: string, policy: ServePolicy = {}): ReleaseRecord | null {

@@ -115,3 +115,24 @@ Pages Functions responses are not cached by the Cloudflare CDN unless code opts 
 - Streaming a ~120 MB body from R2 through a Function is supported (no response-size limit when
   streaming), but must be measured on staging: duration, resume after disconnect, and electron-updater
   over a slow link.
+
+## Signed component manifest + GPT Bridge extension packages (2026-10-23)
+
+`latest.yml` is integrity-checked by the Function but not signed offline, and the extension has no Authenticode at all.
+AI Desk therefore also requires `GET /api/updates/<channel>/components.json`: an Ed25519 envelope signed OFFLINE by the
+release owner (`scripts/release-components.mjs`; the private key never enters this repo or Cloudflare — `keygen` refuses
+paths inside the repo). The payload names the approved desktop version/installer/SHA-512, the extension package
+(version, file, SHA-256, size, bridge protocol, Desktop range, capabilities), the native host protocol, withdrawn
+versions, a monotonic `sequence` (client anti-rollback) and `expiresAt` (≤ 180 days).
+
+| Route | Served when |
+|---|---|
+| `/api/updates/<channel>/components.json` | highest `sequence` among `published` + `approved` component records; bytes re-hashed vs record; `no-cache` |
+| `/api/updates/<channel>/<name>.aidext.json` | listed by any published component record of the channel; R2 size + sha256 metadata checked; Range/ETag as installers |
+
+Records live in `server/releaseData.ts` under `components` (validated by `server/componentRecords.ts`; immutable keys
+`releases/<channel>/components/<sequence>/components.json` and `releases/<channel>/extension/<version>/<file>`).
+Flow: `sign` (optional `--revoke-key-ids` for key rotation) → `verify` → `stage` (packages first, manifest last, `--if-none-match '*'`, then `head-object` size + sha256 verification) → `approve` → `publish`
+(sequence must exceed the published one) → deploy. Withdraw = sign a new sequence listing the version under `withdrawn`
+(clients roll an active withdrawn extension back to the bundled one) and/or `withdraw --sequence`.
+The `beta` channel exists for opted-in testers; the website download stays on `stable`/the RAR bundle.

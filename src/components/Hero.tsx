@@ -1,7 +1,7 @@
 import React from 'react'
 import { ArrowRight, Download, Play, Sparkles } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import type { DownloadView } from '../lib/directDownload'
+import { directDisplayLabel, type DownloadView } from '../lib/directDownload'
 import { HeroVisual } from './hero/HeroVisual'
 
 export const Hero: React.FC<{ download: DownloadView }> = ({ download }) => {
@@ -25,7 +25,7 @@ export const Hero: React.FC<{ download: DownloadView }> = ({ download }) => {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a href={`#${SECTION_IDS.download}`} className="btn bg-brand-navy px-6 py-3.5 !text-white shadow-[0_14px_30px_-14px_rgba(11,31,77,.65)] hover:bg-blue-900">
               <Download className="h-4 w-4" aria-hidden="true" />
-              Tải bản beta
+              {download.kind === 'direct' ? `Tải bản ${directDisplayLabel(download.release)}` : 'Tải bản beta'}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </a>
             <a href={`#${SECTION_IDS.howItWorks}`} className="btn border border-slate-300 bg-white/85 px-5 py-3.5 text-brand-navy shadow-sm backdrop-blur hover:border-blue-300 hover:bg-brand-ice">
@@ -35,7 +35,7 @@ export const Hero: React.FC<{ download: DownloadView }> = ({ download }) => {
           </div>
           <p className="mt-5 flex items-center gap-2 text-sm font-medium text-slate-600">
             <Sparkles className="h-4 w-4 text-blue-600" aria-hidden="true" />
-            Không cần tài khoản AI Desk · {available ? 'Bản 0.3.0 Beta cho Windows x64 hiện có' : 'Bản tải công khai đang được chuẩn bị'}
+            Không cần tài khoản AI Desk · {available ? `Bản ${download.kind === 'direct' ? directDisplayLabel(download.release) : download.kind === 'available' ? `${download.manifest.version} Beta` : 'Beta'} cho Windows x64 hiện có` : 'Bản tải công khai đang được chuẩn bị'}
           </p>
         </div>
         <div className="relative z-10 min-w-0 lg:-mr-8 xl:-mr-[8vw]">

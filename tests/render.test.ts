@@ -156,7 +156,7 @@ test('FAQ renders nine accessible questions, real answer links and current Beta 
   assert.match(html, /Tìm câu hỏi/)
   assert.match(html, /role="status"/)
   for (const href of ['/download', '/install', '/prompts', '/privacy']) assert.ok(html.includes(`href="${href}"`))
-  assert.match(html, /AI Desk 0\.3\.0 Beta là phiên bản công khai duy nhất/)
+  assert.match(html, /AI Desk 0\.5\.0 Beta là phiên bản công khai hiện tại/)
   assert.match(html, /chưa được ký số hoặc chứng nhận bảo mật độc lập/)
   assert.doesNotMatch(html, /sẽ mở tải khi|Hướng dẫn chi tiết sẽ được công bố|divide-line/)
 })
@@ -188,29 +188,42 @@ test('no outdated or unverified claims and no login, license or payment UI', asy
   }
 })
 
-const R2_URL = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/BoCaiDatAIDesk%200.3%20Beta.rar'
-const R2_SHA256 = '666eb793899160acaf40d7961fc2fb4544836b22f24a4b95abbee790af4dac03'
+const R2_DIR = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/releases/beta/0.5.0-beta.1'
+const R2_URL = `${R2_DIR}/AI-Desk-Setup-0.5.0-beta.1.exe`
+const R2_SHA256 = 'b6842ee91145cc18697ece0684e626804bee57139d7e906388065da63072aa31'
+const EXT_URL = `${R2_DIR}/AI-Desk-Extension-0.5.0-beta.1.zip`
+const EXT_SHA256 = '301dc8397b53de2ff2123365fcf481dedd720988c92241355d9e885c0ac84364'
+const OLD_RAR = /BoCaiDatAIDesk|\.rar\b|0\.4\.0|0\.4 Beta|gói RAR|RELEASE_NOTES\.md/i
 
-test('home download section links the primary button straight to the public R2 RAR', async () => {
+test('home download section links the primary button to the verified R2 installer and the extension zip as secondary', async () => {
   const html = await page('/')
   assert.match(html, /data-download-state="direct"/)
-  assert.equal(html.split(`href="${R2_URL}"`).length - 1, 1, 'exactly one link to the R2 file: the primary button')
-  assert.ok(html.includes(R2_SHA256))
-  assert.ok(!/href="[^"]*\.exe/.test(html), 'no EXE link')
+  assert.equal(html.split(`href="${R2_URL}"`).length - 1, 1, 'exactly one link to the installer: the primary button')
+  assert.equal(html.split(`href="${EXT_URL}"`).length - 1, 1, 'exactly one link to the extension zip')
+  assert.ok(html.includes(R2_SHA256) && html.includes(EXT_SHA256))
+  assert.match(html, /Tải GPT Bridge Extension \(\.zip\)/)
+  assert.doesNotMatch(html, OLD_RAR, 'no 0.4 / RAR copy left on the home page')
+  assert.doesNotMatch(html, /data-release-notes/, 'no notes link without a notesUrl')
 })
 
-test('download page advertises only the direct 0.3.0 Beta RAR', async () => {
+test('download page advertises only the direct 0.5.0 Beta installer + extension zip', async () => {
   const html = await page('/download')
-  assert.match(html, /AI Desk 0\.3\.0/)
+  assert.match(html, /AI Desk 0\.5\.0 Beta/)
+  assert.match(html, /0\.5\.0-beta\.1/)
   assert.match(html, /Beta · chưa ký số/)
   assert.doesNotMatch(html, /Phiên bản trước|0\.2 Beta|BoCaiDatAIDesk%200\.2|object R2 trả 404/)
+  assert.doesNotMatch(html, OLD_RAR, 'no 0.4 / RAR copy left on /download')
   assert.match(html, /Windows x64/)
   assert.match(html, /data-release-gate="direct"/)
   assert.equal(html.split(`href="${R2_URL}"`).length - 1, 1)
+  assert.equal(html.split(`href="${EXT_URL}"`).length - 1, 1)
+  assert.match(html, /Load unpacked/)
+  assert.match(html, /Repair GPT Bridge/)
   assert.match(html, /Manual và Assisted/)
   assert.match(html, /Chrome \/ Brave và GPT Bridge/)
   assert.match(html, /Full Autonomous/)
-  assert.ok(!/href="[^"]*\.exe/.test(html), 'no EXE link')
+  assert.doesNotMatch(html, /data-release-notes/, 'no notes link: 0.5.0-beta.1 has no release notes on R2')
+  assert.doesNotMatch(html, /data-inner-installer/)
 })
 
 test('Public Alpha card opens only for a validated signed manifest and renders its exact metadata', async () => {
@@ -599,24 +612,58 @@ test('waitlist form with Turnstile: submit locked until solved, retry on failure
   assert.match(submitTag(expired), /disabled/)
 })
 
-test('direct R2 state: one primary button, 0.3.0 Beta facts and the unsigned/antivirus notice', async () => {
+test('direct R2 state: installer primary button, extension zip secondary, 0.5.0 Beta facts and the unsigned/antivirus notice', async () => {
   const DownloadCard = await component<{ state: unknown }>('/src/components/DownloadSection.tsx', 'DownloadCard')
   const PublicAlphaDownloadCard = await component<{ state: unknown; fallbackVersion: string }>('/src/pages/DownloadPage.tsx', 'PublicAlphaDownloadCard')
-  const { DIRECT_DOWNLOAD } = (await vite.ssrLoadModule('/src/lib/directDownload.ts')) as { DIRECT_DOWNLOAD: Record<string, unknown> }
+  const { DIRECT_DOWNLOAD } = (await vite.ssrLoadModule('/src/lib/directDownload.ts')) as { DIRECT_DOWNLOAD: Record<string, unknown> & { extension?: Record<string, unknown> } }
+  assert.equal(DIRECT_DOWNLOAD.versionLabel, '0.5.0-beta.1')
+  assert.equal(DIRECT_DOWNLOAD.format, 'EXE')
   assert.equal(DIRECT_DOWNLOAD.url, R2_URL)
   assert.equal(DIRECT_DOWNLOAD.sha256, R2_SHA256)
-  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 120629335)
+  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 131479366)
+  assert.equal(DIRECT_DOWNLOAD.fileName, 'AI-Desk-Setup-0.5.0-beta.1.exe')
+  assert.equal(DIRECT_DOWNLOAD.notesUrl, undefined, 'no release notes published for 0.5.0-beta.1')
+  assert.equal(DIRECT_DOWNLOAD.innerInstaller, undefined)
+  assert.deepEqual({ ...DIRECT_DOWNLOAD.extension }, {
+    fileName: 'AI-Desk-Extension-0.5.0-beta.1.zip',
+    url: EXT_URL,
+    sizeBytes: 66249,
+    sha256: EXT_SHA256,
+  })
   const state = { kind: 'direct', release: DIRECT_DOWNLOAD }
   for (const html of [render(h(DownloadCard, { state })), render(h(PublicAlphaDownloadCard, { state, fallbackVersion: '0.2.0' }))]) {
-    assert.equal(html.match(/<a [^>]*href=/g)?.length, 1, 'exactly one link: the primary button')
+    assert.equal(html.match(/<a [^>]*href=/g)?.length, 2, 'exactly two links: installer (primary) and extension zip (secondary)')
     assert.ok(html.includes(`<a href="${R2_URL}"`))
-    assert.match(html, /Tải AI Desk cho Windows/)
-    assert.match(html, /0\.3 Beta/)
-    assert.match(html, /120\.63 MB/)
-    assert.match(html, />RAR</)
+    assert.ok(html.includes(`<a href="${EXT_URL}"`))
+    assert.match(html, /Tải AI Desk 0\.5\.0 Beta/)
+    assert.match(html, /125\.4 MB/)
+    assert.match(html, />EXE</)
+    assert.match(html, /AI-Desk-Setup-0\.5\.0-beta\.1\.exe/)
+    assert.match(html, /data-direct-extension-download="true"/)
+    assert.match(html, /Tải GPT Bridge Extension \(\.zip\)/)
+    assert.match(html, /AI-Desk-Extension-0\.5\.0-beta\.1\.zip · 65 KB/)
+    assert.match(html, new RegExp(`data-extension-sha256="?[^>]*>${EXT_SHA256}<`))
+    assert.ok(html.includes(R2_SHA256), 'installer checksum shown')
+    assert.doesNotMatch(html, OLD_RAR)
+    assert.doesNotMatch(html, /Prompt-Kit|>RAR</)
+    assert.doesNotMatch(html, /data-release-notes/, 'no notes link without a notesUrl')
     assert.match(html, /chưa ký số/)
     assert.match(html, /Kaspersky/)
     assert.match(html, /aria-label="Sao chép(?: mã)? SHA-256"/)
-    assert.ok(!/Alpha RC1|alpha-rc1|Đã phát hành/.test(html), 'labelled 0.3.0 Beta only, never as a signed release')
+    assert.ok(!/Alpha RC1|alpha-rc1|Đã phát hành/.test(html), 'labelled 0.5.0 Beta only, never as a signed release')
+  }
+})
+
+test('direct R2 state: a notes link renders only when notesUrl is set; no extension box without an extension', async () => {
+  const DownloadCard = await component<{ state: unknown }>('/src/components/DownloadSection.tsx', 'DownloadCard')
+  const PublicAlphaDownloadCard = await component<{ state: unknown; fallbackVersion: string }>('/src/pages/DownloadPage.tsx', 'PublicAlphaDownloadCard')
+  const { DIRECT_DOWNLOAD } = (await vite.ssrLoadModule('/src/lib/directDownload.ts')) as { DIRECT_DOWNLOAD: Record<string, unknown> }
+  const notesUrl = `${R2_DIR}/RELEASE_NOTES.md`
+  const withNotes = render(h(DownloadCard, { state: { kind: 'direct', release: { ...DIRECT_DOWNLOAD, notesUrl } } }))
+  assert.ok(withNotes.includes(`href="${notesUrl}"`), 'notes link appears when notesUrl is present')
+  const { extension: _omit, ...noExtension } = DIRECT_DOWNLOAD
+  for (const html of [render(h(DownloadCard, { state: { kind: 'direct', release: noExtension } })), render(h(PublicAlphaDownloadCard, { state: { kind: 'direct', release: noExtension }, fallbackVersion: '0.2.0' }))]) {
+    assert.equal(html.match(/<a [^>]*href=/g)?.length, 1, 'only the installer link')
+    assert.doesNotMatch(html, /data-direct-extension|data-release-notes/)
   }
 })

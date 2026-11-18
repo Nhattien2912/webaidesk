@@ -6,7 +6,7 @@ test('approved FAQ reflects public Beta, provider permissions and an unannounced
   assert.equal(FAQS.length, 9)
   assert.equal(new Set(FAQS.map(({ id }) => id)).size, 9)
   const answer = (id: string) => FAQS.find((faq) => faq.id === id)!.paragraphs.join(' ')
-  assert.match(answer('download'), /AI Desk 0\.3\.0 Beta là phiên bản công khai duy nhất/)
+  assert.match(answer('download'), /AI Desk 0\.5\.0 Beta là phiên bản công khai hiện tại/)
   assert.match(answer('download'), /chưa được ký số hoặc chứng nhận bảo mật độc lập/)
   assert.match(answer('setup'), /Prompt Library đã có trên website/)
   assert.match(answer('account'), /không cần tạo tài khoản AI Desk/)

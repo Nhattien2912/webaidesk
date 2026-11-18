@@ -8,6 +8,7 @@
 
 import { RELEASE_DATA } from './releaseData.ts'
 import { checkCatalog, currentRelease, DEFAULT_CHANNEL, type ReleaseRecord } from './releaseRecords.ts'
+import { checkComponents, type ComponentRecord } from './componentRecords.ts'
 
 export type ReleaseKind = 'installer' | 'portable' | 'archive'
 
@@ -63,8 +64,11 @@ const checked = checkCatalog(RELEASE_DATA)
 
 /** Structurally valid, conflict-free release records (published or not). */
 export const RELEASE_RECORDS: readonly ReleaseRecord[] = checked.valid
+const checkedComponents = checkComponents((RELEASE_DATA as { components?: unknown } | null)?.components)
+/** Signed component manifests + extension packages (Desktop-managed updaters). */
+export const COMPONENT_RECORDS: readonly ComponentRecord[] = checkedComponents.valid
 /** Problems found in server/releaseData.ts (tests assert this is empty). */
-export const RELEASE_FILE_ERRORS: readonly string[] = checked.errors
+export const RELEASE_FILE_ERRORS: readonly string[] = [...checked.errors, ...checkedComponents.errors]
 
 /** All download entries; handleDownload still re-checks status/approval/signature per request. */
 export const RELEASE_CATALOG: readonly ReleaseEntry[] = RELEASE_RECORDS.flatMap(entriesForRecord)

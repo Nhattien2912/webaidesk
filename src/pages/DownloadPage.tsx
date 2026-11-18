@@ -4,8 +4,8 @@ import { publicAlphaRelease } from '../data/publicAlphaRelease'
 import { siteConfig } from '../config/site'
 import { formatReleaseFileSize, formatReleaseVersion, validateReleaseManifest } from '../lib/releaseManifest'
 import { useDownloadState } from '../lib/useDownloadState'
-import type { DownloadView, DirectRelease } from '../lib/directDownload'
-import { DirectDownloadNotice } from '../components/DownloadSection'
+import { RAR_CONTENTS, directDisplayLabel, type DownloadView, type DirectRelease } from '../lib/directDownload'
+import { DirectDownloadNotice, DirectExtensionDownload } from '../components/DownloadSection'
 
 const List: React.FC<{ items: readonly string[]; tone?: 'positive' | 'warning' }> = ({ items, tone = 'positive' }) => (
   <ul className="mt-5 space-y-3">
@@ -63,12 +63,13 @@ const DirectDownloadCard: React.FC<{ release: DirectRelease }> = ({ release }) =
       <Download className="h-7 w-7" aria-hidden="true" />
     </span>
     <p className="mt-4 text-sm font-medium text-amber-200">Beta · chưa ký số</p>
-    <p className="mt-1 text-sm text-muted">Windows x64 · phiên bản {release.versionLabel} · RAR</p>
+    <p className="mt-1 text-sm text-muted">Windows x64 · phiên bản {release.versionLabel} · {release.format}</p>
     <a href={release.url} download={release.fileName} className="btn-primary mt-5 w-full" rel="noopener" data-direct-download="true">
       <Download className="h-4 w-4" aria-hidden="true" />
-      Tải AI Desk cho Windows
+      Tải AI Desk {directDisplayLabel(release)}
     </a>
     <DirectDownloadNotice release={release} className="mt-4 text-left text-xs" />
+    {release.extension && <DirectExtensionDownload extension={release.extension} className="mt-4" />}
     <dl className="mt-5 space-y-2 border-t border-line pt-4 text-left text-xs">
       <div className="flex justify-between gap-3">
         <dt className="text-subtle">Phiên bản</dt>
@@ -76,12 +77,22 @@ const DirectDownloadCard: React.FC<{ release: DirectRelease }> = ({ release }) =
       </div>
       <div className="flex justify-between gap-3">
         <dt className="text-subtle">Dung lượng</dt>
-        <dd className="text-ink">{formatReleaseFileSize({ kind: 'archive', sizeBytes: release.sizeBytes })}</dd>
+        <dd className="text-ink">{formatReleaseFileSize({ kind: release.format === 'RAR' ? 'archive' : 'installer', sizeBytes: release.sizeBytes })}</dd>
       </div>
       <div className="flex justify-between gap-3">
         <dt className="text-subtle">Định dạng</dt>
-        <dd className="text-ink">RAR</dd>
+        <dd className="text-ink">{release.format}</dd>
       </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-subtle">Tệp</dt>
+        <dd className="break-all text-right text-ink">{release.fileName}</dd>
+      </div>
+      {release.format === 'RAR' && (
+        <div className="flex justify-between gap-3">
+          <dt className="text-subtle">Gồm</dt>
+          <dd className="text-right text-ink">{RAR_CONTENTS}</dd>
+        </div>
+      )}
       <div>
         <dt className="text-subtle">SHA-256</dt>
         <dd className="mt-1 break-all font-mono text-[11px] leading-relaxed text-ink">{release.sha256}</dd>
@@ -188,12 +199,12 @@ export const DownloadPage: React.FC = () => {
               </div>
               <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
                 {download.kind === 'direct'
-                  ? `AI Desk ${download.release.versionLabel}`
+                  ? `AI Desk ${directDisplayLabel(download.release)}`
                   : `AI Desk Public Alpha v${release.version}`}
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-                Một bản Beta có kiểm soát dành cho luồng Manual và Assisted. Gói RAR hiện tại chưa ký số;
-                hãy đối chiếu SHA-256 và đọc cảnh báo bảo mật trước khi mở tệp.
+                Một bản Beta nội bộ có kiểm soát dành cho luồng Manual và Assisted. Gồm bộ cài Windows (.exe) và GPT Bridge
+                Extension (.zip) tải riêng; bộ cài chưa ký số — hãy đối chiếu SHA-256 và đọc cảnh báo bảo mật trước khi dùng.
               </p>
             </div>
 
@@ -215,19 +226,30 @@ export const DownloadPage: React.FC = () => {
           </Card>
           <Card title="Chrome / Brave và GPT Bridge" icon={<Globe2 className="h-5 w-5" aria-hidden="true" />}>
             <p className="mt-4 text-sm leading-relaxed text-muted">
-              GPT Bridge kết nối AI Desk với đúng cuộc trò chuyện GPT Manager đã liên kết. Trong Alpha, người dùng tự
-              chạy thiết lập trong ứng dụng và nạp extension được tạo bằng <strong className="text-ink">Load unpacked</strong>.
-              Native host và extension chỉ được dùng sau khi kiểm tra danh tính và toàn vẹn thành công.
+              GPT Bridge kết nối AI Desk với đúng cuộc trò chuyện GPT Manager đã liên kết. Trong Beta, người dùng tải
+              riêng tệp extension (.zip), giải nén và nạp thư mục AI-Desk-Extension bằng{' '}
+              <strong className="text-ink">Load unpacked</strong> (Developer mode). Native host và extension chỉ được dùng
+              sau khi kiểm tra danh tính và toàn vẹn thành công.
             </p>
           </Card>
         </div>
 
         <section className="mt-6 card p-6 sm:p-8">
-          <h2 className="text-2xl font-semibold text-white">Cài đặt gói RAR 0.3.0 Beta</h2>
+          <h2 className="text-2xl font-semibold text-white">Cài đặt bản {download.kind === 'direct' ? directDisplayLabel(download.release) : `v${release.version}`}</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Tải tệp RAR, đối chiếu SHA-256, giải nén vào thư mục riêng rồi làm theo hướng dẫn đi kèm. Không bỏ qua
-            cảnh báo SmartScreen hoặc phần mềm bảo mật; executable bên trong chưa được ký số hay chứng nhận bảo mật độc lập.
+            Tải bộ cài .exe, đối chiếu SHA-256 rồi chạy bộ cài cho tài khoản Windows hiện tại. Sau đó tải tệp GPT Bridge
+            Extension (.zip), đối chiếu SHA-256, giải nén và nạp thư mục AI-Desk-Extension bằng Load unpacked (bật
+            Developer mode). Bộ cài chưa được ký số hay chứng nhận bảo mật độc lập, nên Windows SmartScreen hoặc phần mềm
+            diệt virus (ví dụ Kaspersky) có thể cảnh báo “nhà phát hành không xác định”. Nếu SHA-256 không khớp hoặc phần
+            mềm bảo mật phát hiện mối đe dọa, hãy dừng lại; không tắt bảo vệ hay thêm ngoại lệ để ép chạy tệp.
           </p>
+          {download.kind === 'direct' && download.release.innerInstaller && (
+            <p className="mt-3 text-xs leading-relaxed text-muted" data-inner-installer>
+              Sau khi giải nén, có thể kiểm tra thêm <span className="text-ink">{download.release.innerInstaller.fileName}</span>{' '}
+              (SHA-256 của riêng bộ cài, khác SHA-256 của gói RAR):{' '}
+              <code className="break-all font-mono text-[11px] text-ink">{download.release.innerInstaller.sha256}</code>
+            </p>
+          )}
           <ol className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {release.onboardingSteps.map((step, index) => (
               <li key={step} className="rounded-[12px] border border-line bg-navy-900 p-4 text-sm leading-relaxed text-muted">
@@ -243,9 +265,16 @@ export const DownloadPage: React.FC = () => {
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <Card title="Ghi chú phát hành">
             <List items={release.releaseNotes} />
-            <a href="/changelog" className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-accent-light hover:underline">
-              Xem changelog <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
+              <a href="/changelog" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-light hover:underline">
+                Xem changelog <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+              {download.kind === 'direct' && download.release.notesUrl && (
+                <a href={download.release.notesUrl} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-light hover:underline" rel="noopener" data-release-notes>
+                  Ghi chú phát hành {download.release.versionLabel} <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              )}
+            </div>
           </Card>
           <Card title="Giới hạn Alpha">
             <List items={release.knownLimitations} tone="warning" />

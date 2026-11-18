@@ -3,6 +3,8 @@
 //   GET/HEAD /api/updates/<channel>/latest.yml          electron-builder metadata of the CURRENT release
 //   GET/HEAD /api/updates/<channel>/<installer>.exe      NSIS installer (Range/resume supported)
 //   GET/HEAD /api/updates/<channel>/<installer>.exe.blockmap
+//   GET/HEAD /api/updates/<channel>/components.json        Ed25519-signed component manifest (signed offline)
+//   GET/HEAD /api/updates/<channel>/<name>.aidext.json     GPT Bridge extension package named by that manifest
 //
 // Configure the app with provider "generic", url "https://webaidesk.pages.dev/api/updates/stable":
 // electron-updater fetches <url>/latest.yml and resolves the installer URL relative to it.
@@ -16,7 +18,8 @@
 //     available for differential downloads); R2 objects must match size + SHA-256.
 //   * Portable builds are never part of the feed.
 
-import { RELEASE_RECORDS } from './releaseCatalog.ts'
+import { COMPONENT_RECORDS, RELEASE_RECORDS } from './releaseCatalog.ts'
+import { COMPONENTS_FILE, currentComponents, EXTENSION_PACKAGE, findExtensionPackage, type ComponentRecord } from './componentRecords.ts'
 import { serveObject, type DownloadEnv, type R2BucketLike } from './downloadHandler.ts'
 import {
   currentRelease,
@@ -26,10 +29,12 @@ import {
   UPDATE_METADATA_FILE,
   type ArtifactRef,
   type ReleaseRecord,
+  UPDATE_FEED_POLICY,
 } from './releaseRecords.ts'
 
 export interface UpdateDeps {
   records: readonly ReleaseRecord[]
+  components?: readonly ComponentRecord[]
 }
 
 const UPDATE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.exe(\.blockmap)?$/
@@ -77,9 +82,8 @@ export function metadataMatchesRecord(yml: string, r: ReleaseRecord): boolean {
   )
 }
 
-async function serveMetadata(request: Request, bucket: R2BucketLike | undefined, r: ReleaseRecord): Promise<Response> {
-  if (!bucket) return fail('not_configured')
-  const ref: ArtifactRef = r.artifacts.updateMetadata
+/** Small metadata object read fully and re-hashed before it is served (latest.yml, components.json). */
+async function readVerified(bucket: R2BucketLike, ref: ArtifactRef): Promise<{ bytes: ArrayBuffer; etag: string } | Response> {
   let obj
   try {
     obj = await bucket.get(ref.r2Key)
@@ -95,6 +99,31 @@ async function serveMetadata(request: Request, bucket: R2BucketLike | undefined,
     return fail('storage_error')
   }
   if (bytes.byteLength !== ref.sizeBytes || (await sha256Hex(bytes)) !== ref.sha256) return fail('integrity_mismatch')
+  return { bytes, etag: obj.httpEtag }
+}
+
+async function serveComponents(request: Request, bucket: R2BucketLike | undefined, r: ComponentRecord): Promise<Response> {
+  if (!bucket) return fail('not_configured')
+  const got = await readVerified(bucket, r.manifest)
+  if (got instanceof Response) return got
+  return new Response(request.method === 'HEAD' ? null : got.bytes, {
+    status: 200,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'content-length': String(got.bytes.byteLength),
+      'cache-control': 'no-cache',
+      etag: got.etag,
+      'x-content-type-options': 'nosniff',
+      'x-aidesk-components': `${r.channel}/${r.sequence}`,
+    },
+  })
+}
+
+async function serveMetadata(request: Request, bucket: R2BucketLike | undefined, r: ReleaseRecord): Promise<Response> {
+  if (!bucket) return fail('not_configured')
+  const got = await readVerified(bucket, r.artifacts.updateMetadata)
+  if (got instanceof Response) return got
+  const { bytes } = got
   const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
   if (!metadataMatchesRecord(text, r)) return fail('integrity_mismatch')
   return new Response(request.method === 'HEAD' ? null : bytes, {
@@ -104,7 +133,7 @@ async function serveMetadata(request: Request, bucket: R2BucketLike | undefined,
       'content-length': String(bytes.byteLength),
       // Always revalidate: a withdrawn release must disappear from the feed on the next check.
       'cache-control': 'no-cache',
-      etag: obj.httpEtag,
+      etag: got.etag,
       'x-content-type-options': 'nosniff',
       'x-aidesk-release': `${r.channel}/${r.version}`,
     },
@@ -124,13 +153,25 @@ export async function handleUpdate(
   const file = one(fileParam)
 
   if (file === UPDATE_METADATA_FILE) {
-    const current = currentRelease(deps.records, channel)
+    const current = currentRelease(deps.records, channel, UPDATE_FEED_POLICY)
     if (!current) return fail('no_release')
     return serveMetadata(request, env.RELEASES, current)
   }
 
+  if (file === COMPONENTS_FILE) {
+    const current = currentComponents(deps.components ?? COMPONENT_RECORDS, channel)
+    if (!current) return fail('no_release')
+    return serveComponents(request, env.RELEASES, current)
+  }
+
+  if (EXTENSION_PACKAGE.test(file)) {
+    const pkg = findExtensionPackage(deps.components ?? COMPONENT_RECORDS, channel, file)
+    if (!pkg) return fail('not_found')
+    return serveObject(request, env.RELEASES, { ...pkg, contentType: 'application/json', disposition: 'attachment' })
+  }
+
   if (!UPDATE_FILE.test(file)) return fail('invalid_filename')
-  const servable = deps.records.filter((r) => r.channel === channel && isServable(r))
+  const servable = deps.records.filter((r) => r.channel === channel && isServable(r, UPDATE_FEED_POLICY))
   for (const r of servable) {
     const inst = r.artifacts.installer
     if (file === inst.fileName) {

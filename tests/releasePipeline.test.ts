@@ -172,6 +172,27 @@ test('currentRelease: highest semver among published + approved + signed', () =>
   assert.equal(currentRelease(records, 'stable')?.version, '0.3.0')
   assert.equal(currentRelease(records, 'stable', { allowUnsigned: true })?.version, '0.6.0')
   assert.equal(currentRelease([], 'stable'), null)
+  // feed-only: an unsigned build the Owner approved for the update feed is current ONLY under the feed policy
+  const withFeedOnly = [...records, build('0.7.0', { signature: 'unsigned', updateTrust: 'feed-only' }).record]
+  assert.equal(currentRelease(withFeedOnly, 'stable')?.version, '0.3.0', 'website download ignores feed-only records')
+  assert.equal(currentRelease(withFeedOnly, 'stable', { allowFeedOnly: true })?.version, '0.7.0')
+  assert.equal(currentRelease(records, 'stable', { allowFeedOnly: true })?.version, '0.3.0', 'plain unsigned never counts as feed-only')
+})
+
+test('updateTrust: only feed-only, only on unsigned records', () => {
+  assert.deepEqual(validateRecord(build('0.2.0', { signature: 'unsigned', updateTrust: 'feed-only' }).record), [])
+  assert.ok(validateRecord(build('0.2.0', { updateTrust: 'feed-only' }).record).includes('updateTrust feed-only is only for unsigned builds'))
+  assert.ok(validateRecord({ ...build('0.2.0', { signature: 'unsigned' }).record, updateTrust: 'yes' }).includes('updateTrust invalid'))
+})
+
+test('feed-only unsigned release is served by the update feed (latest.yml + installer)', async () => {
+  const b = build('0.2.0', { signature: 'unsigned', updateTrust: 'feed-only' })
+  const { bucket } = bucketFor([b])
+  const meta = await feed([b.record], bucket, 'latest.yml')
+  assert.equal(meta.status, 200)
+  assert.equal(await meta.text(), b.yml)
+  const exe = await feed([b.record], bucket, b.record.artifacts.installer.fileName)
+  assert.equal(exe.status, 200)
 })
 
 // ---------------------------------------------------------------- update feed
@@ -395,6 +416,14 @@ test('transitions: approve/publish need signature + approval; publish switches c
   assert.throws(() => applyTransition(unsigned, 'approve', '0.4.0'), /unsigned/)
   assert.throws(() => applyTransition(unsigned, 'publish', '0.4.0'), /approve|unsigned/)
   assert.throws(() => applyTransition(unsigned, 'approve', '9.9.9'), /no release/)
+  // --feed-only: explicit Owner opt-in for an unsigned build, update feed only
+  const fo = applyTransition(unsigned, 'approve', '0.4.0', 'stable', { feedOnly: true }).file
+  assert.equal(fo.releases[0].updateTrust, 'feed-only')
+  assert.equal(fo.releases[0].approved, true)
+  assert.equal(applyTransition(fo, 'publish', '0.4.0').file.releases[0].status, 'published')
+  assert.throws(() => applyTransition(file, 'approve', '0.3.0', 'stable', { feedOnly: true }), /only staged|only for unsigned/)
+  const signedStaged = { schemaVersion: 1, releases: [staged('0.5.0')] }
+  assert.throws(() => applyTransition(signedStaged, 'approve', '0.5.0', 'stable', { feedOnly: true }), /only for unsigned/)
   assert.throws(() => addStagedRecord({ schemaVersion: 1, releases: [build('0.2.0').record] }, build('0.2.0').record), /duplicate/)
 })
 

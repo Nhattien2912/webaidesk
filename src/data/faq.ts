@@ -38,9 +38,9 @@ export const FAQS: FaqEntry[] = [
     id: 'download',
     question: 'Tôi có thể tải AI Desk ở đâu?',
     paragraphs: [
-      'AI Desk 0.3.0 Beta là phiên bản công khai duy nhất, dành cho Windows 10/11 x64.',
-      'Trang Tải về cung cấp đúng một gói RAR cùng tên tệp, dung lượng và mã SHA-256 để kiểm tra trước khi giải nén.',
-      'Lưu ý: gói RAR và executable bên trong chưa được ký số hoặc chứng nhận bảo mật độc lập. Hãy đọc kỹ cảnh báo trước khi sử dụng.',
+      'AI Desk 0.5.0 Beta là phiên bản công khai hiện tại (0.5.0-beta.1), dành cho Windows 10/11 x64.',
+      'Trang Tải về cung cấp bộ cài Windows (.exe) và GPT Bridge Extension (.zip, tải riêng), mỗi tệp kèm tên tệp, dung lượng và mã SHA-256 để kiểm tra trước khi chạy hoặc giải nén.',
+      'Lưu ý: bộ cài chưa được ký số hoặc chứng nhận bảo mật độc lập, và việc cài đặt trên máy sạch chưa được kiểm thử. Hãy đọc kỹ cảnh báo trước khi sử dụng.',
     ],
     links: [{ text: 'Tải về', href: '/download' }],
   },

@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { AlertTriangle, Check, Copy, Download, Loader2, Monitor } from 'lucide-react'
+import { AlertTriangle, Check, Copy, Download, Loader2, Monitor, Puzzle } from 'lucide-react'
 import { SECTION_IDS } from '../config/navigation'
-import { formatReleaseFileSize, formatReleaseVersion } from '../lib/releaseManifest'
-import type { DownloadView, DirectRelease } from '../lib/directDownload'
+import { formatBytes, formatReleaseFileSize, formatReleaseVersion } from '../lib/releaseManifest'
+import { RAR_CONTENTS, directDisplayLabel, type DownloadView, type DirectExtension, type DirectRelease } from '../lib/directDownload'
 
 const REQUIREMENTS = ['Windows 10 hoặc 11, 64-bit', 'ChatGPT web cho GPT Manager', 'Codex hoặc Claude Code làm worker']
 
@@ -47,13 +47,42 @@ export const DirectDownloadNotice: React.FC<{ release: DirectRelease; className?
   <div role="note" data-direct-download-notice className={`rounded-[10px] border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 ${className}`}>
     <p className="flex items-center gap-2 font-semibold text-amber-900">
       <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-      Bản {release.versionLabel} Beta chưa ký số
+      Bản {directDisplayLabel(release)} chưa ký số
     </p>
     <p className="mt-1 text-amber-950">
-      Bộ cài bên trong chưa có chữ ký số và chưa hoàn tất đánh giá bảo mật. Windows
-      SmartScreen hoặc phần mềm diệt virus (đã ghi nhận Kaspersky) có thể cảnh báo. Hãy đối chiếu SHA-256 bên dưới trước
-      khi giải nén.
+      {release.format === 'RAR' ? 'Bộ cài bên trong' : 'Bộ cài'} chưa có chữ ký số và chưa hoàn tất đánh giá bảo mật.
+      Chưa kiểm thử cài đặt, nâng cấp và gỡ cài đặt trên máy sạch. Windows SmartScreen hoặc phần mềm diệt virus (đã ghi
+      nhận Kaspersky) có thể cảnh báo. Hãy đối chiếu SHA-256 bên dưới trước khi {release.format === 'RAR' ? 'giải nén' : 'chạy bộ cài'}. Không tắt
+      phần mềm bảo vệ hay thêm ngoại lệ để ép chạy tệp.
     </p>
+  </div>
+)
+
+/** Secondary download: the separate GPT Bridge extension zip (Load unpacked), with its own size and SHA-256. */
+export const DirectExtensionDownload: React.FC<{ extension: DirectExtension; className?: string }> = ({ extension, className = '' }) => (
+  <div data-direct-extension className={`rounded-[10px] border border-slate-200 bg-slate-50 p-4 text-left text-sm leading-relaxed text-slate-700 ${className}`}>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 font-semibold text-slate-900">
+          <Puzzle className="h-4 w-4 shrink-0 text-accent-light" aria-hidden="true" />
+          GPT Bridge Extension (tải riêng)
+        </p>
+        <p className="mt-0.5 break-all text-xs text-slate-600">
+          {extension.fileName} · {formatBytes(extension.sizeBytes)}
+        </p>
+      </div>
+      <a href={extension.url} download={extension.fileName} className="btn-secondary shrink-0" rel="noopener" data-direct-extension-download="true">
+        <Download className="h-4 w-4" aria-hidden="true" />
+        Tải GPT Bridge Extension (.zip)
+      </a>
+    </div>
+    <p className="mt-2 text-xs text-slate-600">
+      Giải nén, mở brave://extensions (hoặc chrome://extensions), bật Developer mode → Load unpacked → chọn thư mục AI-Desk-Extension.
+    </p>
+    <div className="mt-2 flex items-start gap-2">
+      <span className="shrink-0 text-xs font-medium text-slate-600">SHA-256</span>
+      <code className="min-w-0 break-all font-mono text-xs leading-relaxed text-slate-700" data-extension-sha256>{extension.sha256}</code>
+    </div>
   </div>
 )
 
@@ -78,11 +107,11 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
               {manifest && primary
                 ? `AI Desk ${formatReleaseVersion(manifest.version, primary.kind)}`
                 : direct
-                  ? `AI Desk ${direct.versionLabel}`
+                  ? `AI Desk ${directDisplayLabel(direct)}`
                   : 'AI Desk cho Windows'}
             </h3>
             <p className="mt-0.5 text-sm text-slate-600">
-              {direct ? 'Gói tải Windows (RAR)' : primary?.kind === 'archive' ? 'Gói tải Windows (RAR)' : 'Bộ cài Windows (.exe)'}
+              {direct ? (direct.format === 'RAR' ? 'Gói cài đặt đầy đủ cho Windows (RAR)' : 'Bộ cài Windows (.exe)') : primary?.kind === 'archive' ? 'Gói tải Windows (RAR)' : 'Bộ cài Windows (.exe)'}
             </p>
           </div>
         </div>
@@ -91,7 +120,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
           {href ? (
             <a href={href} download={direct?.fileName} className="btn-primary px-7" rel="noopener" {...(direct ? { 'data-direct-download': 'true' } : {})}>
               <Download className="h-4 w-4" aria-hidden="true" />
-              Tải AI Desk cho Windows
+              {direct ? `Tải AI Desk ${directDisplayLabel(direct)}` : 'Tải AI Desk cho Windows'}
             </a>
           ) : (
             <button type="button" className="btn-primary px-7" disabled>
@@ -112,6 +141,7 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
       </div>
 
       {direct && <DirectDownloadNotice release={direct} className="mt-6" />}
+      {direct?.extension && <DirectExtensionDownload extension={direct.extension} className="mt-4" />}
 
       <dl className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Trạng thái phát hành">
@@ -129,20 +159,28 @@ export const DownloadCard: React.FC<{ state: DownloadView }> = ({ state }) => {
           {manifest && primary ? formatReleaseVersion(manifest.version, primary.kind) : direct ? direct.versionLabel : '—'}
         </Fact>
         <Fact label="Dung lượng">
-          {primary ? formatReleaseFileSize(primary) : direct ? formatReleaseFileSize({ kind: 'archive', sizeBytes: direct.sizeBytes }) : '—'}
+          {primary ? formatReleaseFileSize(primary) : direct ? formatReleaseFileSize({ kind: direct.format === 'RAR' ? 'archive' : 'installer', sizeBytes: direct.sizeBytes }) : '—'}
         </Fact>
         <Fact label="Hệ điều hành">{manifest ? manifest.minOs : 'Windows 10/11, 64-bit'}</Fact>
         {direct && (
           <>
-            <Fact label="Định dạng">RAR</Fact>
+            <Fact label="Định dạng">{direct.format}</Fact>
+            {direct.format === 'RAR' && <Fact label="Gồm">{RAR_CONTENTS}</Fact>}
             <Fact label="Tệp">
               <span className="break-all">{direct.fileName}</span>
             </Fact>
             <Fact label="Chữ ký số">
               <span className="inline-flex items-center gap-1.5 text-amber-800">
-                <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Chưa xác minh
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Chưa ký số
               </span>
             </Fact>
+            {direct.notesUrl && (
+              <Fact label="Ghi chú phát hành">
+                <a href={direct.notesUrl} className="text-accent-light hover:underline" rel="noopener" data-release-notes>
+                  Xem ghi chú
+                </a>
+              </Fact>
+            )}
           </>
         )}
         {manifest && primary && (
@@ -197,8 +235,8 @@ export const DownloadSection: React.FC<{ state: DownloadView }> = ({ state }) =>
             Tải AI Desk cho Windows
           </h2>
           <p className="section-lead">
-            Miễn phí trong giai đoạn Public Beta, không cần đăng nhập. Gói RAR cho Windows x64 được phân phối qua
-            Cloudflare kèm mã SHA-256 để bạn tự kiểm tra tệp tải về.
+            Miễn phí trong giai đoạn Public Beta, không cần đăng nhập. Bộ cài Windows x64 (.exe) và GPT Bridge Extension (.zip, tải
+            riêng) được phân phối qua Cloudflare, mỗi tệp kèm mã SHA-256 để bạn tự kiểm tra trước khi dùng.
           </p>
         </div>
         <ul className="space-y-2 text-sm">

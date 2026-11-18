@@ -1,4 +1,10 @@
-# Desktop Update Manager — Phase B contract (not implemented)
+# Desktop Update Manager — Phase B contract
+
+> **Status 2026-10-23:** implemented in AI-Desk (`src/main/updateManager.ts`, `extensionUpdater.ts`; see
+> `AI-Desk/docs/DESKTOP_UPDATER_RELEASE.md`). Differences from the contract below: background download is configurable
+> (default ON, only effective in builds with both the Authenticode publisher and the offline release-feed key), every
+> download/install also requires the Ed25519-signed `components.json` (see RELEASE_PIPELINE.md), channels `stable` + `beta`.
+> The "Current desktop state" section below is the 2026-10-15 snapshot and is outdated.
 
 Scope: what the AI Desk Electron app must do to consume the Phase A feed. **No desktop code has been
 changed.** Facts below were read from `AI-Desk` (read-only) on 2026-10-15.

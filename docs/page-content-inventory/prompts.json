@@ -6,12 +6,12 @@
   "values": {
     "hero.eyebrow": "Thư viện Prompt",
     "hero.title": "Thư viện Prompt AI Desk",
-    "hero.intro": "Các mẫu action được đối chiếu với schema trong source AI Desk. Bạn có thể sao chép hoặc tải nguyên văn; khả năng tương thích với gói 0.3.0 Beta vẫn cần kiểm chứng.",
+    "hero.intro": "Các mẫu action được đối chiếu với schema trong source AI Desk. Bạn có thể sao chép hoặc tải nguyên văn; khả năng tương thích với bản 0.5.0 Beta vẫn cần kiểm chứng.",
     "hero.badge1": "Đã xác minh: schema khớp source code",
     "hero.badge2": "Thử nghiệm: Đang kiểm chứng",
     "hero.badge3": "Sắp có: Chưa sẵn sàng",
     "integrity.lead": "Phạm vi xác minh:",
-    "integrity.text": "nhãn xác minh chỉ khẳng định cấu trúc action khớp source hiện tại. Nó không khẳng định gói tải 0.3.0 Beta đã chứa cùng protocol. Không có secret, token, key hay URL nội bộ trong các mẫu.",
+    "integrity.text": "nhãn xác minh chỉ khẳng định cấu trúc action khớp source hiện tại. Nó không khẳng định bản tải 0.5.0 Beta đã chứa cùng protocol. Không có secret, token, key hay URL nội bộ trong các mẫu.",
     "cat.allLabel": "Tất cả",
     "cat.items": [
       {
@@ -33,7 +33,7 @@
         "workers": "Codex\nClaude Code\nOpenCode\nAntigravity\nAuto",
         "aiDeskVersion": "Source hiện tại",
         "status": "verified",
-        "statusNote": "Schema được đối chiếu với src/shared/managerAction.ts. Khả năng hoạt động trong gói 0.3.0 Beta chưa được xác minh độc lập.",
+        "statusNote": "Schema được đối chiếu với src/shared/managerAction.ts. Khả năng hoạt động trong bản 0.5.0 Beta chưa được xác minh độc lập.",
         "updatedAt": "2026-10-18",
         "content": "Bạn đang chuẩn bị một action cho AI Desk.\n\nKhi người dùng cung cấp nhiệm vụ, hãy trả về đúng một JSON object và không thêm văn bản bên ngoài JSON. Giữ nguyên các khóa sau:\n- type: \"AI_DESK_MANAGER_ACTION\"\n- action: \"SEND_TO_WORKER\"\n- worker: một trong \"claude\", \"codex\", \"opencode\", \"antigravity\" hoặc \"auto\"\n- instruction: yêu cầu cụ thể dành cho worker\n- requestId: null để AI Desk tự tạo ID hiệu lực từ danh tính tin nhắn, hoặc một chuỗi ID do người dùng cung cấp\n- taskTitle: tiêu đề ngắn, không bắt buộc\n\nKhông thêm khóa khác. Không tự tuyên bố rằng action đã chạy; chỉ tạo JSON để AI Desk tiếp nhận."
       },
