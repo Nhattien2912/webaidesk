@@ -30,7 +30,7 @@
       {
         "id": "download",
         "question": "Tôi có thể tải AI Desk ở đâu?",
-        "answer": "AI Desk 0.5.0 Beta là phiên bản công khai hiện tại (0.5.0-beta.2), dành cho Windows 10/11 x64.\n\nTrang Tải về cung cấp bộ cài Windows (.exe) và GPT Bridge Extension (.zip, tải riêng), mỗi tệp kèm tên tệp, dung lượng và mã SHA-256 để kiểm tra trước khi chạy hoặc giải nén.\n\nLưu ý: bộ cài chưa được ký số hoặc chứng nhận bảo mật độc lập, và việc cài đặt trên máy sạch chưa được kiểm thử. Hãy đọc kỹ cảnh báo trước khi sử dụng.",
+        "answer": "AI Desk 0.5.0 Beta là phiên bản công khai hiện tại (0.5.0-beta.3), dành cho Windows 10/11 x64.\n\nTrang Tải về cung cấp bộ cài Windows (.exe) và GPT Bridge Extension (.zip, tải riêng), mỗi tệp kèm tên tệp, dung lượng và mã SHA-256 để kiểm tra trước khi chạy hoặc giải nén.\n\nLưu ý: bộ cài chưa được ký số hoặc chứng nhận bảo mật độc lập, và việc cài đặt trên máy sạch chưa được kiểm thử. Hãy đọc kỹ cảnh báo trước khi sử dụng.",
         "links": "Tải về | /download"
       },
       {
