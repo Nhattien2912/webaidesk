@@ -3,6 +3,52 @@
 // production never reads it. Records here point at the staging R2 bucket and are trusted through the STAGING Ed25519 key.
 export const RELEASE_DATA_STAGING: unknown = /* RELEASES:BEGIN */ {
   "schemaVersion": 1,
-  "releases": [],
-  "components": []
+  "releases": [
+    {
+      "version": "0.5.0-beta.2",
+      "channel": "beta",
+      "releasedAt": "2026-11-18T06:42:30.722Z",
+      "minOs": "Windows 10/11 64-bit",
+      "signature": "unsigned",
+      "status": "published",
+      "approved": true,
+      "artifacts": {
+        "installer": {
+          "fileName": "AI-Desk-Setup-0.5.0-beta.2.exe",
+          "r2Key": "releases/beta/0.5.0-beta.2/AI-Desk-Setup-0.5.0-beta.2.exe",
+          "sizeBytes": 131487613,
+          "sha256": "c3c661869617cb1a8cba2c7fc44213782c904788f2c23f25878e77d9bc646944",
+          "sha512": "vTcIaE2dUXws5IGtEWi1jsXlwV5sQPEhkNF+Xrc2ntOhqN7P96GHecgE4NM+sqnT859rOM2NkeqlUjeHXb01Qw==",
+          "blockmap": {
+            "fileName": "AI-Desk-Setup-0.5.0-beta.2.exe.blockmap",
+            "r2Key": "releases/beta/0.5.0-beta.2/AI-Desk-Setup-0.5.0-beta.2.exe.blockmap",
+            "sizeBytes": 137313,
+            "sha256": "3c2bc0255290602c1a0cf9661e664b35b60313d857bc054cf6f8462ca49e5380"
+          }
+        },
+        "updateMetadata": {
+          "fileName": "latest.yml",
+          "r2Key": "releases/beta/0.5.0-beta.2/latest.yml",
+          "sizeBytes": 364,
+          "sha256": "5d798f934152559755c87390a3f2b5692f05a30b175c7dd30e897e11a3c9da5f"
+        }
+      },
+      "updateTrust": "feed-only"
+    }
+  ],
+  "components": [
+    {
+      "channel": "beta",
+      "sequence": 1,
+      "status": "published",
+      "approved": true,
+      "manifest": {
+        "fileName": "components.json",
+        "r2Key": "releases/beta/components/1/components.json",
+        "sizeBytes": 754,
+        "sha256": "33491367555083586f4718d66f06aa2de19242454dff8739a96ec8d138913643"
+      },
+      "extensionPackages": []
+    }
+  ]
 } /* RELEASES:END */
