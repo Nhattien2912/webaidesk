@@ -1,6 +1,6 @@
 # Bug report V1 — "Gửi báo lỗi" (phía website)
 
-Ngày: 2026-11-18. Trạng thái: **code + test offline xong, CHƯA tạo tài nguyên Cloudflare, CHƯA deploy, CHƯA commit.**
+Ngày: 2026-11-18. Trạng thái: **ĐÃ DEPLOY production 2026-11-18** (webaidesk c9a784d1, Studio 3a595616; test BR-W1CQVY).
 
 Người dùng bấm **Gửi báo lỗi** trong AI Desk, xem trước nội dung, rồi app POST lên website. Website trả mã `BR-XXXXXX`
 để người dùng gửi cho Owner. Chỉ gửi thủ công do người dùng bấm — không có telemetry tự động.
@@ -82,3 +82,11 @@ Không sửa file wrangler thật.
 
 - Chưa có xóa/thời hạn lưu trữ. Gợi ý: lifecycle rule R2 tự xóa sau N ngày (và dọn dòng D1 tương ứng) — cần Owner quyết.
 - UI Studio chưa xem trên trình duyệt thật (cần Access + D1); đã qua typecheck, build, test API.
+
+## Production (2026-11-18)
+
+- D1 riêng `aidesk-bug-reports` (a766913c-9f8d-4e0b-a628-9f846ea2ab41), chỉ áp `0007_bug_reports.sql`; binding **BUG_REPORTS_DB** (không dùng CMS_DB).
+- R2 riêng tư `aidesk-bug-reports` (r2.dev tắt), binding **BUG_REPORTS**.
+- Binding được thêm vào **Dashboard** của cả `webaidesk` và `aidesk-studio-private` (deploy không dùng --config; Dashboard là nguồn chuẩn — webaidesk còn có RELEASES/CMS_DB/CMS_MEDIA).
+- `webaidesk`: secret `IP_HASH_SALT` (ngẫu nhiên). Studio: `BUG_REPORTS_ADMIN_ENABLED=true` — chỉ mở /api/admin/bug-reports (+ session), CMS vẫn tắt, vẫn sau Cloudflare Access.
+- Xem: https://aidesk-studio-private.pages.dev/admin/bugs (đăng nhập Access).

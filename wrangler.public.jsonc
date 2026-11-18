@@ -7,8 +7,10 @@
   "vars": {
     "ENVIRONMENT": "production"
   },
-  // Bug report V1 intake only (POST /api/bug-report). A DEDICATED D1, deliberately NOT bound as CMS_DB: binding the Studio
-  // database here would also switch on the public CMS content / comments APIs. Secret IP_HASH_SALT is set on the project.
+  // !! NOT the deploy source of truth. Production is deployed WITHOUT --config (`wrangler pages deploy dist-public --project-name
+  // webaidesk --branch main`), so the Pages DASHBOARD bindings apply: CMS_DB, CMS_MEDIA, RELEASES (downloads + update feed),
+  // BUG_REPORTS_DB, BUG_REPORTS, secret IP_HASH_SALT. Deploying with --config this file would DROP RELEASES/CMS_*.
+  // Bug report V1 intake (POST /api/bug-report) uses its own D1 "aidesk-bug-reports" (bound as BUG_REPORTS_DB, added 2026-11-18).
   "d1_databases": [{
     "binding": "BUG_REPORTS_DB",
     "database_name": "aidesk-bug-reports",
