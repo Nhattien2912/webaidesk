@@ -8,6 +8,7 @@ import { checkComponents, componentsKey, currentComponents, extensionKey, findEx
 import { handleUpdate } from '../server/updateHandler.ts'
 import { onRequest as publicUpdateRoute } from '../functions-public/api/updates/[channel]/[file].ts'
 import { COMPONENT_RECORDS, RELEASE_FILE_ERRORS } from '../server/releaseCatalog.ts'
+import { RELEASE_DATA } from '../server/releaseData.ts'
 import type { R2BucketLike, R2ObjectLike } from '../server/downloadHandler.ts'
 import { immutableKey, type ReleaseRecord } from '../server/releaseRecords.ts'
 // @ts-expect-error plain ESM script without type declarations
@@ -57,11 +58,43 @@ const get = (records: ComponentRecord[], b: R2BucketLike, file: string, channel 
   handleUpdate(new Request(`https://webaidesk.pages.dev/api/updates/${channel}/${file}`, { method }), { RELEASES: b }, channel, file, { records: [], components: records })
 const err = async (r: Response) => ((await r.json()) as { error: string }).error
 
-test('shipped releaseData: exactly the beta sequence-1 component manifest (0.5.0-beta.2), no stable one, no errors', () => {
+// State-agnostic: server/releaseData.ts is rewritten by the release pipeline on every PUBLISH (a new beta sequence per
+// release), so these tests assert the invariants of whatever it holds — never one fixed snapshot.
+test('shipped releaseData: component manifests valid, nothing dropped, beta-only, sequences 1..N with no gap/duplicate', () => {
   assert.deepEqual(RELEASE_FILE_ERRORS, [])
-  assert.deepEqual(COMPONENT_RECORDS.map((r) => `${r.channel}/${r.sequence} ${r.status} approved=${r.approved}`), ['beta/1 published approved=true'])
-  assert.equal(COMPONENT_RECORDS[0]!.manifest.r2Key, 'releases/beta/components/1/components.json')
-  assert.deepEqual(COMPONENT_RECORDS[0]!.extensionPackages, [], 'no extension package published (extension unchanged since 0.5.0-beta.1)')
+  const raw = (RELEASE_DATA as { components?: unknown[] }).components ?? []
+  assert.equal(COMPONENT_RECORDS.length, raw.length, 'no shipped record silently dropped by validation or de-duplication')
+  assert.ok(COMPONENT_RECORDS.some((r) => r.sequence === 1 && r.status === 'published'), 'the first production manifest (beta/1) stays in the catalog (records are never deleted)')
+  assert.ok(COMPONENT_RECORDS.every((r) => r.channel === 'beta'), 'the pipeline releases the beta channel only — no stable manifest')
+  for (const r of COMPONENT_RECORDS) assert.equal(r.manifest.r2Key, componentsKey(r.channel, r.sequence), `beta/${r.sequence}: immutable per-sequence key`)
+  const seqs = COMPONENT_RECORDS.map((r) => r.sequence).sort((a, b) => a - b)
+  assert.deepEqual(seqs, seqs.map((_, i) => i + 1), 'sequences are exactly 1..N (pipeline assigns max+1; no gap, no duplicate)')
+})
+
+test('shipped releaseData: components.json = highest published+approved sequence; unpublished/higher/conflicting records are never selected', async () => {
+  const servable = COMPONENT_RECORDS.filter((r) => r.channel === 'beta' && r.status === 'published' && r.approved)
+  const top = Math.max(...servable.map((r) => r.sequence))
+  assert.equal(currentComponents(COMPONENT_RECORDS, 'beta')?.sequence, top, 'feed picks the highest published+approved sequence')
+  assert.equal(currentComponents(COMPONENT_RECORDS, 'stable'), null)
+  // adversarial records layered on the REAL shipped data: none of them may become current
+  const extra = (sequence: number, over: Partial<ComponentRecord>) => fixture(sequence, `9.${sequence}.0`, over, 'beta').record
+  const staged = extra(top + 1, { status: 'staged', approved: false })
+  const withdrawn = extra(top + 2, { status: 'withdrawn', approved: true })
+  const unapproved = extra(top + 3, { status: 'staged', approved: true })
+  const withRogue = checkComponents([...COMPONENT_RECORDS, staged, withdrawn, unapproved])
+  assert.deepEqual(withRogue.errors, [])
+  assert.equal(currentComponents(withRogue.valid, 'beta')?.sequence, top, 'staged / withdrawn / not-yet-published sequences are never served')
+  assert.ok(checkComponents([...COMPONENT_RECORDS, extra(top + 4, { status: 'published', approved: false })]).errors.length > 0, 'published-without-approval is invalid')
+  // a second record claiming the current sequence with different bytes knocks BOTH out (fail closed, never the forged one)
+  const forged = extra(top, {})
+  const conflict = checkComponents([...COMPONENT_RECORDS, forged])
+  assert.ok(conflict.errors.some((e) => e.includes(`beta/${top}`)))
+  assert.ok(!conflict.valid.some((r) => r.sequence === top), 'conflicting current sequence dropped entirely')
+  // the served bytes must still match the record: tampered R2 content for the real current manifest fails closed
+  const cur = currentComponents(COMPONENT_RECORDS, 'beta')!
+  const { b } = bucket([{ key: cur.manifest.r2Key, bytes: enc('{"tampered":true}'), sha: cur.manifest.sha256 }])
+  const res = await get([...COMPONENT_RECORDS], b, 'components.json', 'beta')
+  assert.equal(await err(res), 'integrity_mismatch', 'bytes that do not match the shipped record are never served')
 })
 
 test('components.json: current = highest published+approved sequence, served verbatim, no-cache; signature verifies', async () => {

@@ -13,6 +13,7 @@ import {
   type ReleaseRecord,
 } from '../server/releaseRecords.ts'
 import { currentCatalog, entriesForRecord, RELEASE_CATALOG, RELEASE_FILE_ERRORS, RELEASE_RECORDS } from '../server/releaseCatalog.ts'
+import { RELEASE_DATA } from '../server/releaseData.ts'
 import { handleDownload, handleLatestManifest, type R2BucketLike, type R2ObjectLike } from '../server/downloadHandler.ts'
 import { handleUpdate, metadataMatchesRecord } from '../server/updateHandler.ts'
 // @ts-expect-error plain ESM script without type declarations
@@ -113,14 +114,67 @@ const errorOf = async (res: Response) => ((await res.json()) as { error: string 
 
 // ---------------------------------------------------------------- shipped state
 
-test('shipped server/releaseData.ts: only 0.5.0-beta.2 (feed-only), offered by the beta update feed but not by the website', () => {
+// State-agnostic: the release pipeline appends one record per PUBLISH, so these tests assert the invariants of whatever
+// server/releaseData.ts holds (validity, selection rule, website policy) — never one fixed snapshot.
+test('shipped server/releaseData.ts: every record valid (none dropped), beta.2 kept, unique semver; unsigned only ever feed-only', () => {
   assert.deepEqual([...RELEASE_FILE_ERRORS], [])
-  assert.deepEqual(RELEASE_RECORDS.map((r) => `${r.channel}/${r.version} ${r.status} ${r.signature} ${r.updateTrust ?? '-'}`), ['beta/0.5.0-beta.2 published unsigned feed-only'])
-  assert.equal(currentRelease(RELEASE_RECORDS, 'stable'), null)
-  assert.equal(currentRelease(RELEASE_RECORDS, 'beta'), null, 'website policy never serves the unsigned build')
-  assert.equal(currentRelease(RELEASE_RECORDS, 'beta', { allowFeedOnly: true })?.version, '0.5.0-beta.2', 'update feed serves it (feed-only trust)')
-  assert.ok(RELEASE_CATALOG.every((e) => e.signature === 'unsigned' && e.version === '0.5.0-beta.2'), 'catalog holds no other build')
-  assert.deepEqual(currentCatalog(false), [], 'website manifest: nothing (direct R2 download is used instead)')
+  const raw = (RELEASE_DATA as { releases: unknown[] }).releases
+  assert.equal(RELEASE_RECORDS.length, raw.length, 'no shipped record silently dropped by validation or de-duplication')
+  assert.ok(RELEASE_RECORDS.some((r) => r.channel === 'beta' && r.version === '0.5.0-beta.2' && r.status === 'published'), 'the first OTA build stays in the catalog (records are withdrawn, never deleted)')
+  for (const r of RELEASE_RECORDS) {
+    assert.deepEqual(validateRecord(r), [], `${r.channel}/${r.version}`)
+    if (r.signature === 'unsigned' && r.status === 'published') assert.equal(r.updateTrust, 'feed-only', `${r.version}: a published unsigned build must be Owner-approved feed-only`)
+  }
+  const versions = RELEASE_RECORDS.map((r) => `${r.channel}/${r.version}`)
+  assert.equal(new Set(versions).size, versions.length, 'one record per channel+version')
+  // every website download entry belongs to a shipped record with the same trust
+  for (const e of RELEASE_CATALOG) assert.ok(RELEASE_RECORDS.some((r) => r.version === e.version && r.signature === e.signature), `${e.version}: catalog entry backed by a record`)
+})
+
+test('shipped server/releaseData.ts: update feed serves the highest servable version; website never an unsigned build', () => {
+  const servable = (channel: string, feedOnlyOk: boolean) => RELEASE_RECORDS.filter((r) => r.channel === channel && r.status === 'published' && r.approved && (r.signature === 'signed' || (feedOnlyOk && r.updateTrust === 'feed-only')))
+  const highest = (rs: ReleaseRecord[]) => rs.map((r) => r.version).sort(compareSemver).pop() ?? null
+  for (const channel of ['stable', 'beta']) {
+    const feed = currentRelease(RELEASE_RECORDS, channel, { allowFeedOnly: true })
+    assert.equal(feed?.version ?? null, highest(servable(channel, true)), `${channel}: update feed = highest published+approved (signed or feed-only)`)
+    for (const r of servable(channel, true)) assert.ok(compareSemver(feed!.version, r.version) >= 0, `${channel}: feed never serves a downgrade below ${r.version}`)
+    const site = currentRelease(RELEASE_RECORDS, channel)
+    assert.equal(site?.version ?? null, highest(servable(channel, false)), `${channel}: website = highest signed build`)
+    assert.ok(site === null || site.signature === 'signed', 'website policy never serves an unsigned build')
+  }
+  const siteStable = currentRelease(RELEASE_RECORDS, 'stable')
+  assert.deepEqual(currentCatalog(false), siteStable ? entriesForRecord(siteStable) : [], 'website manifest = the stable signed release or nothing')
+  assert.ok(currentCatalog(false).every((e) => e.signature === 'signed'))
+})
+
+test('shipped server/releaseData.ts: higher-versioned unsigned / staged / withdrawn / invalid / duplicate records are never selected', () => {
+  const beta = currentRelease(RELEASE_RECORDS, 'beta', { allowFeedOnly: true })
+  assert.ok(beta, 'the beta feed serves a shipped release')
+  const rogue = (version: string, over: Partial<ReleaseRecord>, seed: number) => {
+    const fileName = `AI-Desk-Setup-${version}.exe`
+    const r = build(version, { channel: 'beta', signature: 'unsigned', signer: undefined, updateTrust: 'feed-only', ...over }, seed).record
+    r.artifacts.installer.r2Key = immutableKey('beta', version, fileName)
+    r.artifacts.installer.blockmap.r2Key = immutableKey('beta', version, `${fileName}.blockmap`)
+    r.artifacts.updateMetadata.r2Key = immutableKey('beta', version, 'latest.yml')
+    return r
+  }
+  const notFeedOnly = rogue('9.0.1', { updateTrust: undefined }, 2)
+  const staged = rogue('9.0.2', { status: 'staged', approved: true }, 3)
+  const withdrawn = rogue('9.0.3', { status: 'withdrawn' }, 4)
+  const unapproved = rogue('9.0.4', { status: 'staged', approved: false }, 5)
+  const invalid = rogue('9.0.5', {}, 6)
+  invalid.artifacts.installer.sha512 = 'not-a-sha512'
+  const older = rogue('0.0.1', {}, 7)
+  const checked = checkCatalog({ schemaVersion: 1, releases: [...RELEASE_RECORDS, notFeedOnly, staged, withdrawn, unapproved, invalid, older] })
+  assert.ok(checked.errors.some((e) => e.includes('sha512')), 'invalid record reported')
+  assert.ok(!checked.valid.includes(invalid), 'invalid record dropped')
+  assert.equal(currentRelease(checked.valid, 'beta', { allowFeedOnly: true })?.version, beta.version, 'none of the rogue records displaces the real current release (no downgrade either)')
+  assert.equal(currentRelease(checked.valid, 'beta')?.version ?? null, currentRelease(RELEASE_RECORDS, 'beta')?.version ?? null, 'website selection unchanged by unsigned rogue records')
+  // a second record reusing the current version knocks BOTH out — fail closed, never the forged one
+  const forged = rogue(beta.version, {}, 8)
+  const dup = checkCatalog({ schemaVersion: 1, releases: [...RELEASE_RECORDS, forged] })
+  assert.ok(dup.errors.some((e) => e.includes(`beta/${beta.version}: duplicate`)))
+  assert.ok(!dup.valid.some((r) => r.version === beta.version), 'conflicting current version dropped entirely')
 })
 
 // ---------------------------------------------------------------- record rules
