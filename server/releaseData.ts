@@ -4,5 +4,52 @@
 // the markers.
 export const RELEASE_DATA: unknown = /* RELEASES:BEGIN */ {
   "schemaVersion": 1,
-  "releases": []
+  "releases": [
+    {
+      "version": "0.5.0-beta.2",
+      "channel": "beta",
+      "releasedAt": "2026-11-18T03:50:53.752Z",
+      "minOs": "Windows 10/11 64-bit",
+      "signature": "unsigned",
+      "status": "published",
+      "approved": true,
+      "artifacts": {
+        "installer": {
+          "fileName": "AI-Desk-Setup-0.5.0-beta.2.exe",
+          "r2Key": "releases/beta/0.5.0-beta.2/AI-Desk-Setup-0.5.0-beta.2.exe",
+          "sizeBytes": 131487210,
+          "sha256": "e11978581f255f3ac96485b12d6fa1609e6d4a8aa5ccf53593682cb4e29c673f",
+          "sha512": "8H1b3iXN+mSQ4LLRhikhouerHGbj+4KqCX8ccxE/F9/njoctFQtY3jfelKxx4YXzf/k/8LCbfch/Ap/cGekzyQ==",
+          "blockmap": {
+            "fileName": "AI-Desk-Setup-0.5.0-beta.2.exe.blockmap",
+            "r2Key": "releases/beta/0.5.0-beta.2/AI-Desk-Setup-0.5.0-beta.2.exe.blockmap",
+            "sizeBytes": 137216,
+            "sha256": "dce7faf2d02aaa3fb8a31e4b933778ee5c40d23144fed1e8d979469ffefbca0a"
+          }
+        },
+        "updateMetadata": {
+          "fileName": "latest.yml",
+          "r2Key": "releases/beta/0.5.0-beta.2/latest.yml",
+          "sizeBytes": 364,
+          "sha256": "b715f0d242bea785a736f254e3cc4b66e664d3a9e9f492fdb52cc0d2c43662e1"
+        }
+      },
+      "updateTrust": "feed-only"
+    }
+  ],
+  "components": [
+    {
+      "channel": "beta",
+      "sequence": 1,
+      "status": "published",
+      "approved": true,
+      "manifest": {
+        "fileName": "components.json",
+        "r2Key": "releases/beta/components/1/components.json",
+        "sizeBytes": 754,
+        "sha256": "33e1f799656a4225669b655a4c8ef5cc444ef3199540b00041dc576938ddce31"
+      },
+      "extensionPackages": []
+    }
+  ]
 } /* RELEASES:END */

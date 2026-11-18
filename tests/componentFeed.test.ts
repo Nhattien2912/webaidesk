@@ -57,9 +57,11 @@ const get = (records: ComponentRecord[], b: R2BucketLike, file: string, channel 
   handleUpdate(new Request(`https://webaidesk.pages.dev/api/updates/${channel}/${file}`, { method }), { RELEASES: b }, channel, file, { records: [], components: records })
 const err = async (r: Response) => ((await r.json()) as { error: string }).error
 
-test('shipped releaseData has no component manifest yet and no errors', () => {
-  assert.deepEqual(COMPONENT_RECORDS, [])
+test('shipped releaseData: exactly the beta sequence-1 component manifest (0.5.0-beta.2), no stable one, no errors', () => {
   assert.deepEqual(RELEASE_FILE_ERRORS, [])
+  assert.deepEqual(COMPONENT_RECORDS.map((r) => `${r.channel}/${r.sequence} ${r.status} approved=${r.approved}`), ['beta/1 published approved=true'])
+  assert.equal(COMPONENT_RECORDS[0]!.manifest.r2Key, 'releases/beta/components/1/components.json')
+  assert.deepEqual(COMPONENT_RECORDS[0]!.extensionPackages, [], 'no extension package published (extension unchanged since 0.5.0-beta.1)')
 })
 
 test('components.json: current = highest published+approved sequence, served verbatim, no-cache; signature verifies', async () => {
@@ -164,7 +166,7 @@ test('release-components script: entries, unsigned desktop refused, transitions 
   assert.throws(() => buildPayload({ channel: 'stable', sequence: 1, expiresDays: 365 }), /1\.\.180/)
 })
 
-test('Pages Function route (public deployment) serves the feed through the same handler; shipped data → no_release', async () => {
+test('Pages Function route (public deployment) serves the feed through the same handler; shipped data: stable empty, beta published', async () => {
   const { b } = bucket([])
   for (const file of ['components.json', 'AI-Desk-GPT-Bridge-0.5.1.aidext.json', 'latest.yml']) {
     const res = await publicUpdateRoute({ request: new Request(`https://webaidesk.pages.dev/api/updates/stable/${file}`), env: { RELEASES: b }, params: { channel: 'stable', file } })
@@ -172,7 +174,8 @@ test('Pages Function route (public deployment) serves the feed through the same 
     assert.equal(res.headers.get('cache-control'), 'no-store')
   }
   const beta = await publicUpdateRoute({ request: new Request('https://webaidesk.pages.dev/api/updates/beta/components.json'), env: { RELEASES: b }, params: { channel: 'beta', file: 'components.json' } })
-  assert.equal(await err(beta), 'no_release', 'beta channel routed, nothing published')
+  // beta has a published manifest (sequence 1); this test bucket is empty, so the handler fails closed on the missing object.
+  assert.equal(await err(beta), 'release_unavailable', 'beta channel routed to its published record; empty bucket fails closed')
 })
 
 test('revocation flag in payload; cannot revoke the signing key', () => {

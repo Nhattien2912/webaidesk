@@ -188,11 +188,11 @@ test('no outdated or unverified claims and no login, license or payment UI', asy
   }
 })
 
-const R2_DIR = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/releases/beta/0.5.0-beta.1'
-const R2_URL = `${R2_DIR}/AI-Desk-Setup-0.5.0-beta.1.exe`
-const R2_SHA256 = 'b6842ee91145cc18697ece0684e626804bee57139d7e906388065da63072aa31'
-const EXT_URL = `${R2_DIR}/AI-Desk-Extension-0.5.0-beta.1.zip`
-const EXT_SHA256 = '301dc8397b53de2ff2123365fcf481dedd720988c92241355d9e885c0ac84364'
+const R2_DIR = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev/releases/beta/0.5.0-beta.2'
+const R2_URL = `${R2_DIR}/AI-Desk-Setup-0.5.0-beta.2.exe`
+const R2_SHA256 = 'e11978581f255f3ac96485b12d6fa1609e6d4a8aa5ccf53593682cb4e29c673f'
+const EXT_URL = `${R2_DIR}/AI-Desk-Extension-0.5.0-beta.2.zip`
+const EXT_SHA256 = '4bddf96794e3465d8beaa5a74ef06518ac0f3c7e1aeec342d2a5e4dc1a802d93'
 const OLD_RAR = /BoCaiDatAIDesk|\.rar\b|0\.4\.0|0\.4 Beta|gói RAR|RELEASE_NOTES\.md/i
 
 test('home download section links the primary button to the verified R2 installer and the extension zip as secondary', async () => {
@@ -209,7 +209,7 @@ test('home download section links the primary button to the verified R2 installe
 test('download page advertises only the direct 0.5.0 Beta installer + extension zip', async () => {
   const html = await page('/download')
   assert.match(html, /AI Desk 0\.5\.0 Beta/)
-  assert.match(html, /0\.5\.0-beta\.1/)
+  assert.match(html, /0\.5\.0-beta\.2/)
   assert.match(html, /Beta · chưa ký số/)
   assert.doesNotMatch(html, /Phiên bản trước|0\.2 Beta|BoCaiDatAIDesk%200\.2|object R2 trả 404/)
   assert.doesNotMatch(html, OLD_RAR, 'no 0.4 / RAR copy left on /download')
@@ -222,7 +222,7 @@ test('download page advertises only the direct 0.5.0 Beta installer + extension 
   assert.match(html, /Manual và Assisted/)
   assert.match(html, /Chrome \/ Brave và GPT Bridge/)
   assert.match(html, /Full Autonomous/)
-  assert.doesNotMatch(html, /data-release-notes/, 'no notes link: 0.5.0-beta.1 has no release notes on R2')
+  assert.doesNotMatch(html, /data-release-notes/, 'no notes link: 0.5.0-beta.2 has no release notes on R2')
   assert.doesNotMatch(html, /data-inner-installer/)
 })
 
@@ -616,16 +616,16 @@ test('direct R2 state: installer primary button, extension zip secondary, 0.5.0 
   const DownloadCard = await component<{ state: unknown }>('/src/components/DownloadSection.tsx', 'DownloadCard')
   const PublicAlphaDownloadCard = await component<{ state: unknown; fallbackVersion: string }>('/src/pages/DownloadPage.tsx', 'PublicAlphaDownloadCard')
   const { DIRECT_DOWNLOAD } = (await vite.ssrLoadModule('/src/lib/directDownload.ts')) as { DIRECT_DOWNLOAD: Record<string, unknown> & { extension?: Record<string, unknown> } }
-  assert.equal(DIRECT_DOWNLOAD.versionLabel, '0.5.0-beta.1')
+  assert.equal(DIRECT_DOWNLOAD.versionLabel, '0.5.0-beta.2')
   assert.equal(DIRECT_DOWNLOAD.format, 'EXE')
   assert.equal(DIRECT_DOWNLOAD.url, R2_URL)
   assert.equal(DIRECT_DOWNLOAD.sha256, R2_SHA256)
-  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 131479366)
-  assert.equal(DIRECT_DOWNLOAD.fileName, 'AI-Desk-Setup-0.5.0-beta.1.exe')
-  assert.equal(DIRECT_DOWNLOAD.notesUrl, undefined, 'no release notes published for 0.5.0-beta.1')
+  assert.equal(DIRECT_DOWNLOAD.sizeBytes, 131487210)
+  assert.equal(DIRECT_DOWNLOAD.fileName, 'AI-Desk-Setup-0.5.0-beta.2.exe')
+  assert.equal(DIRECT_DOWNLOAD.notesUrl, undefined, 'no release notes published for 0.5.0-beta.2')
   assert.equal(DIRECT_DOWNLOAD.innerInstaller, undefined)
   assert.deepEqual({ ...DIRECT_DOWNLOAD.extension }, {
-    fileName: 'AI-Desk-Extension-0.5.0-beta.1.zip',
+    fileName: 'AI-Desk-Extension-0.5.0-beta.2.zip',
     url: EXT_URL,
     sizeBytes: 66249,
     sha256: EXT_SHA256,
@@ -638,10 +638,10 @@ test('direct R2 state: installer primary button, extension zip secondary, 0.5.0 
     assert.match(html, /Tải AI Desk 0\.5\.0 Beta/)
     assert.match(html, /125\.4 MB/)
     assert.match(html, />EXE</)
-    assert.match(html, /AI-Desk-Setup-0\.5\.0-beta\.1\.exe/)
+    assert.match(html, /AI-Desk-Setup-0\.5\.0-beta\.2\.exe/)
     assert.match(html, /data-direct-extension-download="true"/)
     assert.match(html, /Tải GPT Bridge Extension \(\.zip\)/)
-    assert.match(html, /AI-Desk-Extension-0\.5\.0-beta\.1\.zip · 65 KB/)
+    assert.match(html, /AI-Desk-Extension-0\.5\.0-beta\.2\.zip · 65 KB/)
     assert.match(html, new RegExp(`data-extension-sha256="?[^>]*>${EXT_SHA256}<`))
     assert.ok(html.includes(R2_SHA256), 'installer checksum shown')
     assert.doesNotMatch(html, OLD_RAR)

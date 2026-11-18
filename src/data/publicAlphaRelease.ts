@@ -19,18 +19,20 @@ export interface PublicAlphaRelease {
  */
 export const publicAlphaRelease: PublicAlphaRelease = {
   product: 'AI Desk',
-  version: '0.5.0-beta.1',
+  version: '0.5.0-beta.2',
   channel: 'Public Alpha',
   platform: 'Windows x64',
-  // AI Desk release commit "release: 0.5.0-beta.1 — version bump + native helper release pin".
-  metadataCommit: '0b61f5e0cdfccf118dc1440bd3ac0a493669d297',
-  sourceCommit: '0b61f5e0cdfccf118dc1440bd3ac0a493669d297',
+  // AI Desk release commit "release: 0.5.0-beta.2 — version bump (feed-only OTA, bug report V1, ownership fix)".
+  metadataCommit: 'e3595ed7dc32e12ceb9ec76d7664049c3b29800d',
+  sourceCommit: 'e3595ed7dc32e12ceb9ec76d7664049c3b29800d',
   supportedFeatures: [
     'Điều phối thủ công và có hỗ trợ cho các worker desktop tương thích.',
     'Antigravity Native V2: tự động gửi, nhận và trả kết quả về GPT Manager (requestId AUTO, 1 action mỗi tin nhắn).',
     'GPT Web Bridge cho một cuộc trò chuyện ChatGPT được liên kết rõ ràng.',
     'Kiểm tra toàn vẹn native helper theo nguyên tắc fail-closed.',
     'Quy trình cài đặt theo người dùng, không yêu cầu quyền Administrator.',
+    'Tự cập nhật từ 0.5.0-beta.2: tự kiểm tra, tải bản mới đã ký (Ed25519 + SHA-512) và hỏi trước khi cài.',
+    'Nút "Gửi báo lỗi": xem trước toàn bộ nội dung (đã che token, prompt) rồi mới gửi, nhận mã BR-XXXXXX.',
   ],
   unavailableFeatures: [
     'Full Autonomous và các vòng nhiệm vụ không có người giám sát.',
@@ -45,9 +47,9 @@ export const publicAlphaRelease: PublicAlphaRelease = {
     'Quyền cài ứng dụng cho tài khoản Windows hiện tại; không cần quyền Administrator.',
   ],
   onboardingSteps: [
-    'Tải bộ cài AI-Desk-Setup-0.5.0-beta.1.exe từ trang Download và đối chiếu SHA-256 trước khi chạy; bộ cài chưa được ký số.',
+    'Tải bộ cài AI-Desk-Setup-0.5.0-beta.2.exe từ trang Download và đối chiếu SHA-256 trước khi chạy; bộ cài chưa được ký số.',
     'Chạy bộ cài cho tài khoản hiện tại (không cần Administrator); dừng lại nếu SHA-256 lệch hoặc phần mềm bảo mật phát hiện mối đe dọa.',
-    'Tải AI-Desk-Extension-0.5.0-beta.1.zip, đối chiếu SHA-256, giải nén rồi trong brave://extensions bật Developer mode → Load unpacked → chọn thư mục AI-Desk-Extension.',
+    'Tải AI-Desk-Extension-0.5.0-beta.2.zip, đối chiếu SHA-256, giải nén rồi trong brave://extensions bật Developer mode → Load unpacked → chọn thư mục AI-Desk-Extension.',
     'Nếu AI Desk yêu cầu, bấm Repair GPT Bridge trong AI Desk, rồi tải lại (F5) tab ChatGPT.',
     'Liên kết đúng cuộc trò chuyện GPT Manager và cửa sổ worker trước khi dùng luồng Assisted.',
   ],
@@ -65,7 +67,7 @@ export const publicAlphaRelease: PublicAlphaRelease = {
     'WinHelper và GPT Bridge host được đóng gói dạng binary ghim SHA-256 nhưng chưa ký số; đánh giá bảo mật chưa hoàn tất.',
     'Cài đặt, nâng cấp và gỡ cài đặt chưa được kiểm thử trên máy sạch.',
     'GPT Bridge native host hiện chưa có chữ ký phát hành công khai.',
-    'Bộ cài 0.5.0 Beta chưa được ký số hoặc chứng nhận bảo mật độc lập; tự động cập nhật không cài bản này.',
+    'Bộ cài 0.5.0 Beta chưa được ký số Authenticode hoặc chứng nhận bảo mật độc lập. Từ 0.5.0-beta.2, tự cập nhật chỉ cài bản mới có chữ ký phát hành Ed25519 khớp SHA-512; người đang dùng 0.5.0-beta.1 cần cài tay beta.2 một lần.',
     'Extension Chrome/Brave được tải riêng (.zip) và cần bước Load unpacked thủ công trong giai đoạn Beta.',
   ],
 }

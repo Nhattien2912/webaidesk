@@ -37,27 +37,27 @@ export interface DirectRelease {
 export const RAR_CONTENTS = 'Bộ cài AI Desk, GPT Bridge Extension và Prompt-Kit'
 
 const R2_PUBLIC = 'https://pub-afeeb98d61ba4ab4b97137b6b1bdf3c0.r2.dev'
-const R2_RELEASE_DIR = `${R2_PUBLIC}/releases/beta/0.5.0-beta.1`
+const R2_RELEASE_DIR = `${R2_PUBLIC}/releases/beta/0.5.0-beta.2`
 
 export const DIRECT_DOWNLOAD: DirectRelease = Object.freeze({
-  versionLabel: '0.5.0-beta.1',
+  versionLabel: '0.5.0-beta.2',
   displayLabel: '0.5.0 Beta',
   format: 'EXE',
   /** NSIS installer object in aidesk-releases. Unsigned internal beta; sha256/size verified against R2. */
-  fileName: 'AI-Desk-Setup-0.5.0-beta.1.exe',
-  sizeBytes: 131_479_366,
-  sha256: 'b6842ee91145cc18697ece0684e626804bee57139d7e906388065da63072aa31',
-  url: `${R2_RELEASE_DIR}/AI-Desk-Setup-0.5.0-beta.1.exe`,
-  // No RELEASE_NOTES.md was published for 0.5.0-beta.1 → notesUrl intentionally absent.
+  fileName: 'AI-Desk-Setup-0.5.0-beta.2.exe',
+  sizeBytes: 131_487_210,
+  sha256: 'e11978581f255f3ac96485b12d6fa1609e6d4a8aa5ccf53593682cb4e29c673f',
+  url: `${R2_RELEASE_DIR}/AI-Desk-Setup-0.5.0-beta.2.exe`,
+  // No RELEASE_NOTES.md was published for 0.5.0-beta.2 → notesUrl intentionally absent.
   extension: Object.freeze({
     /** Contains the folder AI-Desk-Extension/ (Load unpacked in brave://extensions with Developer mode). */
-    fileName: 'AI-Desk-Extension-0.5.0-beta.1.zip',
-    url: `${R2_RELEASE_DIR}/AI-Desk-Extension-0.5.0-beta.1.zip`,
+    fileName: 'AI-Desk-Extension-0.5.0-beta.2.zip',
+    url: `${R2_RELEASE_DIR}/AI-Desk-Extension-0.5.0-beta.2.zip`,
     sizeBytes: 66_249,
-    sha256: '301dc8397b53de2ff2123365fcf481dedd720988c92241355d9e885c0ac84364',
+    sha256: '4bddf96794e3465d8beaa5a74ef06518ac0f3c7e1aeec342d2a5e4dc1a802d93',
   }),
   available: true,
-  verifiedAt: '2026-11-16T00:00:00.000Z',
+  verifiedAt: '2026-11-18T00:00:00.000Z',
 })
 
 /** Label used in buttons and headings ("0.5.0 Beta"). */

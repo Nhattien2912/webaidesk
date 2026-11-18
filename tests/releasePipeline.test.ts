@@ -113,11 +113,14 @@ const errorOf = async (res: Response) => ((await res.json()) as { error: string 
 
 // ---------------------------------------------------------------- shipped state
 
-test('shipped server/releaseData.ts is valid, has no current release and no internal build', () => {
+test('shipped server/releaseData.ts: only 0.5.0-beta.2 (feed-only), offered by the beta update feed but not by the website', () => {
   assert.deepEqual([...RELEASE_FILE_ERRORS], [])
+  assert.deepEqual(RELEASE_RECORDS.map((r) => `${r.channel}/${r.version} ${r.status} ${r.signature} ${r.updateTrust ?? '-'}`), ['beta/0.5.0-beta.2 published unsigned feed-only'])
   assert.equal(currentRelease(RELEASE_RECORDS, 'stable'), null)
-  assert.equal(RELEASE_CATALOG.length, 0)
-  assert.deepEqual(currentCatalog(false), [])
+  assert.equal(currentRelease(RELEASE_RECORDS, 'beta'), null, 'website policy never serves the unsigned build')
+  assert.equal(currentRelease(RELEASE_RECORDS, 'beta', { allowFeedOnly: true })?.version, '0.5.0-beta.2', 'update feed serves it (feed-only trust)')
+  assert.ok(RELEASE_CATALOG.every((e) => e.signature === 'unsigned' && e.version === '0.5.0-beta.2'), 'catalog holds no other build')
+  assert.deepEqual(currentCatalog(false), [], 'website manifest: nothing (direct R2 download is used instead)')
 })
 
 // ---------------------------------------------------------------- record rules
@@ -445,7 +448,7 @@ test('release data file round-trips through the script markers without touching 
   try {
     const copy = join(dir, 'releaseData.ts')
     copyFileSync(RELEASES_FILE, copy)
-    assert.deepEqual(readReleaseFile(copy), { schemaVersion: 1, releases: [] })
+    assert.deepEqual(readReleaseFile(copy), readReleaseFile(RELEASES_FILE), 'the copy reads back exactly the shipped data')
     const next = { schemaVersion: 1, releases: [build('0.2.0', { status: 'staged', approved: false }).record] }
     writeReleaseFile(next, copy)
     assert.deepEqual(readReleaseFile(copy), next)
