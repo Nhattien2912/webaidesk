@@ -638,10 +638,29 @@ export async function readWithRetry(get, url, init, { attempts = 6, delayMs = 10
   throw new ReleaseError('VERIFY-READ', `cannot reach ${url} after ${attempts} attempts (${String(last?.message ?? last).slice(0, 80)}) — read-only check, nothing was changed`)
 }
 
-/** Verifies a deployed feed (preview or production) serves EXACTLY this release. */
-export async function verifyFeed({ origin, channel, record, ymlText, components, signer, get: rawGet = fetchBytes, retry }) {
+/**
+ * A brand-new Pages deployment can answer HTTP 404 for a few seconds after `wrangler pages deploy` returned (seen live:
+ * preview d2430ec5 404 at once, 25/25 PASS minutes later). Used for the just-deployed PREVIEW only: a 404 is re-read
+ * (bounded, read-only GET); any other answer — including a 200 with the WRONG content — is returned at once and judged.
+ */
+export async function readFreshDeployment(get, url, init, { attempts = 7, delayMs = 10_000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+  let res
+  for (let i = 1; i <= attempts; i++) {
+    res = await get(url, init)
+    if (res.status !== 404) return res
+    if (i < attempts) await sleep(delayMs)
+  }
+  return res
+}
+
+/**
+ * Verifies a deployed feed (preview or production) serves EXACTLY this release. `freshDeployment` (preview only) adds the
+ * bounded 404 wait of readFreshDeployment; production / post-release checks never pass it.
+ */
+export async function verifyFeed({ origin, channel, record, ymlText, components, signer, get: rawGet = fetchBytes, retry, freshDeployment }) {
   const problems = []
-  const get = (url, init) => readWithRetry(rawGet, url, init, retry)
+  const read = (url, init) => readWithRetry(rawGet, url, init, retry)
+  const get = freshDeployment ? (url, init) => readFreshDeployment(read, url, init, freshDeployment) : read
   const yml = await get(`${origin}/api/updates/${channel}/latest.yml`)
   if (yml.status !== 200 || yml.body.toString('utf8') !== ymlText) problems.push(`latest.yml at ${origin} is not this release (HTTP ${yml.status})`)
   const comp = await get(`${origin}/api/updates/${channel}/components.json`)
@@ -901,7 +920,7 @@ export async function run(argv, deps = {}) {
     const previewUrl = urlRe.exec(`${pv?.stdout ?? ''}${pv?.stderr ?? ''}`)?.[0]
     if (!pv || pv.status !== 0 || !previewUrl) throw new ReleaseError('PUBLISH', 'preview deploy failed or printed no URL — recorded as UNCERTAIN (run --reconcile)')
     journal.step('previewDeploy', { state: 'done', url: previewUrl, fingerprint })
-    const pvProblems = await verifyFeed({ origin: previewUrl, channel, record: built.record, ymlText: built.ymlText, components: plan.components, signer, get })
+    const pvProblems = await verifyFeed({ origin: previewUrl, channel, record: built.record, ymlText: built.ymlText, components: plan.components, signer, get, freshDeployment: deps.previewWait ?? {} })
     if (pvProblems.length) throw new ReleaseError('PUBLISH', [`preview ${previewUrl} does not serve this release:`, ...pvProblems])
     log(`[5/7] PUBLISH staged + preview verified at ${previewUrl}`)
 

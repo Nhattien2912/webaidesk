@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 // @ts-expect-error plain ESM script without type declarations
-import { DEFAULTS, TARGETS, readAsarFiles, run, preflight, ReleaseError, detectAppTarget, resolveTarget, writeReleaseFileAtomic, readWithRetry, ownerGate, GATE_MAX_BLANK_LINES, lineReader } from '../scripts/release-beta.mjs'
+import { DEFAULTS, TARGETS, readAsarFiles, run, preflight, ReleaseError, detectAppTarget, resolveTarget, writeReleaseFileAtomic, readWithRetry, ownerGate, GATE_MAX_BLANK_LINES, lineReader, readFreshDeployment } from '../scripts/release-beta.mjs'
 import { PassThrough } from 'node:stream'
 import { immutableKey } from '../server/releaseRecords.ts'
 
@@ -162,7 +162,7 @@ function fakeWorld(fx: Fx, opts: { putFails?: string; putLandsThenThrows?: strin
 // Exhausted answers = EOF (null): the gate fails closed (a blank line would only be skipped).
 const answers = (...lines: string[]) => ({ isTTY: true, write() {}, readLine: async () => (lines.length ? lines.shift()! : null) })
 const argsFor = (fx: Fx, extra: string[] = []) => [fx.version, '--target', fx.target, '--artifacts', fx.artifacts, '--unpacked', fx.unpacked, '--key', fx.keyPath, '--key-id', fx.keyId, ...extra]
-const depsFor = (fx: Fx, w: ReturnType<typeof fakeWorld>, more: Record<string, unknown> = {}) => ({ releasesFile: fx.releases, journalPath: fx.journal, gitState: w.git, fetch: w.fetch, backend: w.backend, exec: w.exec, distFingerprint: () => 'dist-1', authenticode: () => ({ status: 'NotSigned', signer: '' }), log: () => {}, ...more })
+const depsFor = (fx: Fx, w: ReturnType<typeof fakeWorld>, more: Record<string, unknown> = {}) => ({ releasesFile: fx.releases, journalPath: fx.journal, gitState: w.git, fetch: w.fetch, backend: w.backend, exec: w.exec, distFingerprint: () => 'dist-1', authenticode: () => ({ status: 'NotSigned', signer: '' }), log: () => {}, previewWait: { attempts: 3, delayMs: 0, sleep: async () => {} }, ...more })
 const ph = (fx: Fx) => sha256(fx.installer).slice(0, 8)
 const approve = (fx: Fx, seq = 1) => answers(`UPLOAD ${fx.target} ${fx.version} ${ph(fx)}`, `PUBLISH ${fx.target} ${fx.version} seq${seq} ${ph(fx)}`, `PROMOTE ${fx.target} ${fx.version} ${ph(fx)}`)
 const journalOf = (fx: Fx) => JSON.parse(readFileSync(fx.journal, 'utf8'))
@@ -710,4 +710,79 @@ test('release (live terminal): PROMOTE typed ahead while check/preview ran → P
   const r = await run(argsFor(fx2, ['--release']), depsFor(fx2, w2, { io: t2.io, exec: exec2 }))
   assert.equal(r.ok, true, 'stray Enter presses during the wait do not block the release')
   assert.equal(w2.calls.exec.filter((c) => c.includes('deploy') && c.includes('main')).length, 1)
+})
+
+// ---------------------------------------------------------------- fresh preview: bounded 404 wait (read-only), preview only
+
+test('readFreshDeployment: re-reads only HTTP 404 (bounded); 200 with any content, 5xx and others are returned at once', async () => {
+  const seq = (...statuses: number[]) => {
+    const calls: number[] = []
+    return { calls, get: async () => { const s = statuses.length > 1 ? statuses.shift()! : statuses[0]!; calls.push(s); return { status: s, headers: new Headers(), body: Buffer.from(`s${s}`) } } }
+  }
+  const sleeps: number[] = []
+  const opts = { attempts: 7, delayMs: 5, sleep: async (ms: number) => { sleeps.push(ms) } }
+  const a = seq(404, 404, 200)
+  assert.equal((await readFreshDeployment(a.get, 'u', undefined, opts)).status, 200)
+  assert.deepEqual(a.calls, [404, 404, 200])
+  assert.deepEqual(sleeps, [5, 5])
+  for (const status of [200, 206, 500, 503, 403]) {
+    sleeps.length = 0
+    const b = seq(status, 200)
+    assert.equal((await readFreshDeployment(b.get, 'u', undefined, opts)).status, status)
+    assert.equal(b.calls.length, 1, `${status}: no re-read`)
+    assert.deepEqual(sleeps, [])
+  }
+  sleeps.length = 0
+  const c = seq(404)
+  assert.equal((await readFreshDeployment(c.get, 'u', undefined, opts)).status, 404, 'still 404 after the bound → returned, caller fails')
+  assert.equal(c.calls.length, 7)
+  assert.equal(sleeps.length, 6)
+})
+
+test('PUBLISH: a just-deployed preview that answers 404 for its first reads is waited for (bounded) and then verified; release completes', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  let previewHits = 0
+  const fetch = async (url: string, init?: { method?: string; headers?: Record<string, string> }) => {
+    if (url.includes(`abc123de.${TARGETS[fx.target].previewHost}`) && previewHits++ < 2) return { status: 404, headers: new Headers(), body: Buffer.from('{"ok":false}') }
+    return w.fetch(url, init)
+  }
+  const sleeps: number[] = []
+  const r = await run(argsFor(fx, ['--release']), depsFor(fx, w, { io: approve(fx), fetch, previewWait: { attempts: 7, delayMs: 10_000, sleep: async (ms: number) => { sleeps.push(ms) } } }))
+  assert.equal(r.ok, true)
+  assert.deepEqual(sleeps, [10_000, 10_000], 'two bounded waits, then the preview was verified')
+  assert.equal(w.calls.exec.filter((c) => c.includes('deploy') && c.includes('main')).length, 1)
+})
+
+test('PUBLISH: preview still 404 after the bound, or serving WRONG content (no wait) → PUBLISH FAILED, production never deployed', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const always404 = async (url: string, init?: { method?: string }) => (url.includes(`abc123de.${TARGETS[fx.target].previewHost}`) ? { status: 404, headers: new Headers(), body: Buffer.from('') } : w.fetch(url, init))
+  let sleeps = 0
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io: approve(fx), fetch: always404, previewWait: { attempts: 3, delayMs: 1, sleep: async () => { sleeps++ } } })), /PUBLISH FAILED[\s\S]*HTTP 404/)
+  assert.ok(sleeps > 0 && sleeps <= 2 * 3, 'bounded')
+  assert.ok(!w.calls.exec.some((c) => c.includes('deploy') && c.includes('main')))
+
+  const fx2 = fixture()
+  const w2 = fakeWorld(fx2)
+  const wrong = async (url: string, init?: { method?: string }) => (url.includes(`abc123de.${TARGETS[fx2.target].previewHost}`) && url.endsWith('latest.yml') ? { status: 200, headers: new Headers(), body: Buffer.from('version: 0.0.1\n') } : w2.fetch(url, init))
+  let sleeps2 = 0
+  await assert.rejects(run(argsFor(fx2, ['--release']), depsFor(fx2, w2, { io: approve(fx2), fetch: wrong, previewWait: { attempts: 7, delayMs: 1, sleep: async () => { sleeps2++ } } })), /PUBLISH FAILED[\s\S]*latest\.yml[\s\S]*not this release \(HTTP 200\)/)
+  assert.equal(sleeps2, 0, 'wrong content is judged at once — never waited on')
+  assert.ok(!w2.calls.exec.some((c) => c.includes('deploy') && c.includes('main')))
+})
+
+test('POST-RELEASE (production feed) never uses the 404 wait: a 404 after promote is reported at once', async () => {
+  const fx = fixture()
+  const w = fakeWorld(fx)
+  const origin = TARGETS[fx.target].feedOrigin
+  let prodReads = 0
+  const fetch = async (url: string, init?: { method?: string }) => {
+    if (w.state.deployed && url.startsWith(origin)) { prodReads++; return { status: 404, headers: new Headers(), body: Buffer.from('') } }
+    return w.fetch(url, init)
+  }
+  let sleeps = 0
+  await assert.rejects(run(argsFor(fx, ['--release']), depsFor(fx, w, { io: approve(fx), fetch, previewWait: { attempts: 7, delayMs: 1, sleep: async () => { sleeps++ } } })), /POST-RELEASE FAILED/)
+  assert.equal(sleeps, 0, 'no wait on the production feed')
+  assert.equal(prodReads, 3, 'one read per checked file')
 })
