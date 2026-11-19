@@ -19,12 +19,12 @@ export interface PublicAlphaRelease {
  */
 export const publicAlphaRelease: PublicAlphaRelease = {
   product: 'AI Desk',
-  version: '0.5.0-beta.3',
+  version: '0.5.0-beta.4',
   channel: 'Public Alpha',
   platform: 'Windows x64',
-  // AI Desk release commit "release: 0.5.0-beta.3 — version bump (first OTA update over the beta feed)".
-  metadataCommit: '187af6b5d656aa5c10620152bef1045917071a0c',
-  sourceCommit: '187af6b5d656aa5c10620152bef1045917071a0c',
+  // AI Desk release commit "release: 0.5.0-beta.4 — version bump (Antigravity route-less panel → ROUTE_STALE, BR-70QZ1X; bug report false timeouts)".
+  metadataCommit: 'dd3194b092463d37fc7186e2cd4423cf1be2f698',
+  sourceCommit: 'dd3194b092463d37fc7186e2cd4423cf1be2f698',
   supportedFeatures: [
     'Điều phối thủ công và có hỗ trợ cho các worker desktop tương thích.',
     'Antigravity Native V2: tự động gửi, nhận và trả kết quả về GPT Manager (requestId AUTO, 1 action mỗi tin nhắn).',
@@ -47,7 +47,7 @@ export const publicAlphaRelease: PublicAlphaRelease = {
     'Quyền cài ứng dụng cho tài khoản Windows hiện tại; không cần quyền Administrator.',
   ],
   onboardingSteps: [
-    'Tải bộ cài AI-Desk-Setup-0.5.0-beta.3.exe từ trang Download và đối chiếu SHA-256 trước khi chạy; bộ cài chưa được ký số.',
+    'Tải bộ cài AI-Desk-Setup-0.5.0-beta.4.exe từ trang Download và đối chiếu SHA-256 trước khi chạy; bộ cài chưa được ký số.',
     'Chạy bộ cài cho tài khoản hiện tại (không cần Administrator); dừng lại nếu SHA-256 lệch hoặc phần mềm bảo mật phát hiện mối đe dọa.',
     'Tải AI-Desk-Extension-0.5.0-beta.2.zip, đối chiếu SHA-256, giải nén rồi trong brave://extensions bật Developer mode → Load unpacked → chọn thư mục AI-Desk-Extension.',
     'Nếu AI Desk yêu cầu, bấm Repair GPT Bridge trong AI Desk, rồi tải lại (F5) tab ChatGPT.',
